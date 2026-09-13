@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>bytefort.xyz — Services</title>
+  <meta name="description" content="Self-hosted services dashboard. 9 services running on bare metal." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<div class="mouse-glow" id="mouseGlow"></div>
+<div class="progress-bar" id="progressBar"></div>
+
+<!-- NAVBAR -->
+<nav id="navbar">
+  <div class="nav-inner">
+    <a href="#" class="nav-logo">
+      <span class="logo-bracket">[</span>bf<span class="logo-bracket">]</span><span class="logo-tld">.xyz</span>
+    </a>
+    <div class="nav-right">
+      <div class="nav-status" id="navStatus">
+        <span class="status-dot" id="navDot"></span>
+        <span class="status-text" id="navText">CHECKING</span>
+      </div>
+      <button class="hamburger" id="hamburger" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<!-- MOBILE MENU -->
+<div class="mobile-menu" id="mobileMenu" aria-hidden="true">
+  <ul>
+    <li><a href="#services" class="mobile-link">Services</a></li>
+  </ul>
+  <div class="mobile-status"><span class="status-dot"></span><span>All systems operational</span></div>
+</div>
+
+<!-- HERO -->
+<section class="s-hero">
+  <canvas id="heroCanvas"></canvas>
+  <div class="hero-content">
+    <div class="hero-eyebrow">
+      <span class="status-dot"></span>
+      <span class="mono">// SELF-HOSTED SERVICES</span>
+    </div>
+    <h1 class="hero-name">SERVICES</h1>
+    <p class="hero-desc">9 services. Zero cloud. Real hardware.</p>
+    <div class="hero-stats">
+      <div class="hs-item">
+        <span class="hs-num mono" id="svcCount">—</span>
+        <span class="hs-label mono">Services</span>
+      </div>
+      <div class="hs-sep"></div>
+      <div class="hs-item">
+        <span class="hs-num mono" id="uptimeDays">—</span>
+        <span class="hs-label mono">Days Online</span>
+      </div>
+      <div class="hs-sep"></div>
+      <div class="hs-item">
+        <div style="display:flex;align-items:baseline;gap:0.05em"><span class="hs-num mono" id="uptimePct">—</span><span class="hs-suf mono" id="uptimeSuf">%</span></div>
+        <span class="hs-label mono">Uptime</span>
+      </div>
+    </div>
+    <button class="btn-outline-cyber" id="checkBtn">REFRESH STATUS</button>
+  </div>
+</section>
+
+<!-- SERVICES -->
+<section class="s-services" id="services">
+  <div class="container">
+    <div class="offline-banner" id="offlineBanner">
+      <span class="status-dot offline"></span>
+      <span id="offlineMsg">Connection lost — showing last known status</span>
+    </div>
+    <div class="filter-bar" role="group" aria-label="Filter by category">
+      <button class="filter-btn active" data-filter="all">all</button>
+      <button class="filter-btn" data-filter="infrastructure">infrastructure</button>
+      <button class="filter-btn" data-filter="media">media</button>
+      <button class="filter-btn" data-filter="network">network</button>
+    </div>
+    <div class="services-grid" id="servicesGrid"></div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="site-footer">
+  <div class="container footer-inner">
+    <div class="footer-brand">
+      <span class="footer-logo mono"><span class="logo-bracket">[</span>bf<span class="logo-bracket">]</span><span class="logo-tld">.xyz</span></span>
+      <span class="footer-tag mono">// Self-hosted. Always on.</span>
+    </div>
+    <div class="footer-status">
+      <span class="status-dot" id="footDot"></span>
+      <span class="mono" id="footStatus">Checking...</span>
+    </div>
+  </div>
+</footer>
+
+<!-- TOAST -->
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script src="script.js"></script>
+</body>
+</html>
