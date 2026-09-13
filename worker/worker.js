@@ -14,11 +14,11 @@
 const TARGETS = [
   { name: 'Authentik', url: 'https://auth.bytefort.xyz', timeout: 5000, type: 'http' },
   { name: 'Home Assistant', url: 'https://homeassistant.bytefort.xyz', timeout: 5000, type: 'http' },
-  { name: 'Jellyfin', url: 'https://jellyfin.bytefort.xyz', timeout: 5000, type: 'http' },
+  { name: 'Jellyfin', url: 'https://jellyfin.bytefort.xyz/health', timeout: 5000, type: 'http' },
   { name: 'Netbird', url: 'https://netbird.bytefort.xyz', timeout: 5000, type: 'http' },
-  { name: 'Nginx Proxy Manager', url: 'https://npm.bytefort.xyz', timeout: 5000, type: 'http' },
-  { name: 'Ripper', url: 'https://ripper.bytefort.xyz', timeout: 5000, type: 'http' },
-  { name: 'Jellyseerr', url: 'https://seerr.bytefort.xyz', timeout: 5000, type: 'http' },
+  { name: 'Nginx Proxy Manager', url: 'https://npm.bytefort.xyz/api/', timeout: 5000, type: 'http' },
+  { name: 'Ripper', url: 'https://ripper.bytefort.xyz/favicon.ico', timeout: 5000, type: 'http' },
+  { name: 'Jellyseerr', url: 'https://seerr.bytefort.xyz/api/v1/status', timeout: 5000, type: 'http' },
   { name: 'Speed Test', url: 'https://speedtest.bytefort.xyz', timeout: 5000, type: 'http' },
   { name: 'Vaultwarden', url: 'https://vault.bytefort.xyz', timeout: 5000, type: 'http' },
 ];
