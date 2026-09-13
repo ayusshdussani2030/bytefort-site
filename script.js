@@ -35,6 +35,7 @@ const SERVICES = [
       card.href = svc.url;
       card.dataset.category = svc.cat;
       card.dataset.index = i;
+      card.dataset.name = svc.name;
       
       card.innerHTML =
         '<div class="svc-card-top">' +
@@ -109,7 +110,7 @@ const SERVICES = [
   let isOnline = false;
   let lastStatus = 'checking';
   
-  function updateUI(online, status, pct) {
+  function updateUI(online, status, pct, services) {
     isOnline = online;
     lastStatus = status;
     
@@ -150,15 +151,13 @@ const SERVICES = [
     document.querySelectorAll('.svc-card').forEach(function (card) {
       const statusEl = card.querySelector('.svc-status span:last-child');
       const dot = card.querySelector('.svc-dot');
-      if (online) {
-        card.classList.remove('offline');
-        statusEl.textContent = 'active';
-        dot.classList.remove('offline');
-      } else {
-        card.classList.add('offline');
-        statusEl.textContent = 'offline';
-        dot.classList.add('offline');
-      }
+      const name = card.dataset.name;
+      const svc = services ? services.find(function (s) { return s.name === name; }) : null;
+      const up = svc ? svc.healthy : online;
+
+      card.classList.toggle('offline', !up);
+      dot.classList.toggle('offline', !up);
+      statusEl.textContent = up ? 'active' : 'offline';
     });
   }
   
@@ -189,11 +188,11 @@ const SERVICES = [
       const pct = total > 0 ? Math.round((onlineCount / total) * 100) : 0;
       
       if (total > 0 && onlineCount === total) {
-        updateUI(true, 'healthy', pct);
+        updateUI(true, 'healthy', pct, data.services);
       } else if (total > 0 && (degraded || onlineCount > total / 2)) {
-        updateUI(true, 'degraded', pct);
+        updateUI(true, 'degraded', pct, data.services);
       } else {
-        updateUI(false, 'offline', pct);
+        updateUI(false, 'offline', pct, data.services);
       }
     } catch (err) {
       console.warn('Health check failed:', err.message);

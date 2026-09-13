@@ -2,13 +2,14 @@
  * Health Check Worker
  * Pings your services and returns live status.
  *
- * Services behind the Authentik outpost (jellyfin, npm, ripper, seerr)
- * answer 302 to outpost.goauthentik.io whether or not the app is up.
- * To get a real signal, add an unauthenticated path in Authentik
- * (Applications > Providers > [provider] > Advanced protocol settings >
- * Unauthenticated Paths), then point the target url at that path:
- *   Jellyfin    ^/health$           -> https://jellyfin.bytefort.xyz/health
- *   Jellyseerr  ^/api/v1/status$    -> https://seerr.bytefort.xyz/api/v1/status
+ * Services behind the Authentik outpost answer 302 to outpost.goauthentik.io
+ * whether or not the app is up, so each one points at a path added to
+ * Unauthenticated Paths on its proxy provider
+ * (Applications > Providers > [provider] > Advanced protocol settings):
+ *   Jellyfin    ^/health$
+ *   Jellyseerr  ^/api/v1/status$
+ *   NPM         ^/api/.*
+ *   Ripper      ^/favicon\.ico$
  */
 
 const TARGETS = [
@@ -23,18 +24,23 @@ const TARGETS = [
   { name: 'Vaultwarden', url: 'https://vault.bytefort.xyz', timeout: 5000, type: 'http' },
 ];
 
+// A redirect here means Authentik answered, not the service itself.
 const AUTH_GATE = 'outpost.goauthentik.io';
-
-let lastHealthData = null;
 
 async function pingHost(host, timeout) {
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeout);
 
-    const response = await fetch(host, {
+    // Unique URL per check. Without this the edge serves a cached 200 and a
+    // dead service keeps reporting online.
+    const target = new URL(host);
+    target.searchParams.set('_cb', Date.now().toString());
+
+    const response = await fetch(target.toString(), {
       signal: controller.signal,
       redirect: 'manual',
+      headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' },
       cf: { cacheEverything: false, cacheTtl: 0 },
     });
 
@@ -50,9 +56,9 @@ async function pingHost(host, timeout) {
 }
 
 async function checkTarget(target) {
-  const start = performance.now();
+  const start = Date.now();
   const healthy = await pingHost(target.url, target.timeout);
-  const latency = Math.round(performance.now() - start);
+  const latency = Date.now() - start;
   return {
     ...target,
     healthy,
@@ -66,7 +72,7 @@ async function checkAllHealth() {
   const results = await Promise.all(TARGETS.map(checkTarget));
   const allHealthy = results.every((r) => r.healthy);
 
-  lastHealthData = {
+  return {
     status: allHealthy ? 'healthy' : 'degraded',
     services: results,
     timestamp: new Date().toISOString(),
@@ -74,8 +80,6 @@ async function checkAllHealth() {
       (results.filter((r) => r.healthy).length / results.length) * 100
     ),
   };
-
-  return lastHealthData;
 }
 
 export default {
@@ -87,7 +91,7 @@ export default {
       return new Response(JSON.stringify(healthData, null, 2), {
         headers: {
           'Content-Type': 'application/json',
-          'Cache-Control': 'no-store',
+          'Cache-Control': 'no-store, no-cache, must-revalidate',
           'Access-Control-Allow-Origin': '*',
         },
       });
