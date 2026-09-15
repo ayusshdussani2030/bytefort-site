@@ -337,17 +337,32 @@ const SERVICES = [
   
   let particles = [];
   let mouse = { x: -1000, y: -1000 };
-  let w, h;
+  let w, h, dpr;
   let animId;
+  let lastTime = 0;
+  let resizing = false;
   
   function resize() {
-    w = canvas.width = canvas.offsetWidth;
-    h = canvas.height = canvas.offsetHeight;
+    dpr = window.devicePixelRatio || 1;
+    w = canvas.offsetWidth;
+    h = canvas.offsetHeight;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    resizeParticles();
   }
   
-  function createParticles() {
-    particles = [];
+  function resizeParticles() {
     const count = Math.min(80, Math.floor((w * h) / 15000));
+    if (particles.length === count) {
+      // Only recenter if size changed significantly
+      particles.forEach(function (p) {
+        if (p.x > w) p.x = Math.random() * w;
+        if (p.y > h) p.y = Math.random() * h;
+      });
+      return;
+    }
+    particles = [];
     for (let i = 0; i < count; i++) {
       particles.push({
         x: Math.random() * w,
@@ -359,13 +374,38 @@ const SERVICES = [
     }
   }
   
-  function draw() {
+  function draw(now) {
+    if (!lastTime) lastTime = now;
+    const dt = Math.min((now - lastTime) / 16.67, 3);
+    lastTime = now;
+    
     ctx.clearRect(0, 0, w, h);
     
     const maxDist = 120;
+    ctx.lineWidth = 0.5;
+    
+    for (let i = 0; i < particles.length; i++) {
+      const p = particles[i];
+      
+      // Mouse repulsion
+      const dx = p.x - mouse.x;
+      const dy = p.y - mouse.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 100 && dist > 0) {
+        p.x += (dx / dist) * 2;
+        p.y += (dy / dist) * 2;
+      }
+      
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      
+      if (p.x < 0) { p.x = 0; p.vx *= -1; }
+      if (p.x > w) { p.x = w; p.vx *= -1; }
+      if (p.y < 0) { p.y = 0; p.vy *= -1; }
+      if (p.y > h) { p.y = h; p.vy *= -1; }
+    }
     
     // Draw connections
-    ctx.lineWidth = 0.5;
     for (let i = 0; i < particles.length; i++) {
       for (let j = i + 1; j < particles.length; j++) {
         const dx = particles[i].x - particles[j].x;
@@ -385,22 +425,6 @@ const SERVICES = [
     // Draw particles
     for (let i = 0; i < particles.length; i++) {
       const p = particles[i];
-      
-      // Mouse repulsion
-      const dx = p.x - mouse.x;
-      const dy = p.y - mouse.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < 100) {
-        p.x += dx / dist * 2;
-        p.y += dy / dist * 2;
-      }
-      
-      p.x += p.vx;
-      p.y += p.vy;
-      
-      if (p.x < 0 || p.x > w) p.vx *= -1;
-      if (p.y < 0 || p.y > h) p.vy *= -1;
-      
       ctx.fillStyle = 'rgba(103, 232, 249, 0.5)';
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
@@ -424,27 +448,46 @@ const SERVICES = [
   // Only run if hero is in viewport
   var observer = new IntersectionObserver(function (entries) {
     entries.forEach(function (entry) {
-      if (entry.isIntersecting && !reducedMotion) {
-        resize();
-        createParticles();
-        draw();
+      if (entry.isIntersecting && !reducedMotion && !resizing) {
+        if (!animId) {
+          resize();
+          lastTime = 0;
+          draw(0);
+        }
       } else {
-        cancelAnimationFrame(animId);
+        if (animId) {
+          cancelAnimationFrame(animId);
+          animId = null;
+        }
       }
     });
   }, { threshold: 0.1 });
   
   observer.observe(canvas.parentElement);
   
+  // Throttled resize — no jank during zoom or window resize
   window.addEventListener('resize', function () {
-    resize();
-    createParticles();
+    if (resizing) return;
+    resizing = true;
+    if (animId) {
+      cancelAnimationFrame(animId);
+      animId = null;
+    }
+    requestAnimationFrame(function () {
+      resize();
+      resizing = false;
+      if (!reducedMotion && canvas.parentElement) {
+        var r = canvas.parentElement.getBoundingClientRect();
+        var inView = r.bottom > 0 && r.top < window.innerHeight;
+        if (inView) draw(0);
+      }
+    });
   });
 })();
 
 // ── Scroll Reveal ───────────────────────────────────────
 (function () {
-  const reveals = document.querySelectorAll('.reveal-up');
+  const reveals = document.querySelectorAll('.reveal-up:not(.svc-card)');
   if (!reveals.length) return;
   
   const observer = new IntersectionObserver(function (entries) {
@@ -460,7 +503,7 @@ const SERVICES = [
   }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
   
   reveals.forEach(function (el, i) {
-    el.dataset.index = i;
+    if (!el.dataset.index) el.dataset.index = i;
     observer.observe(el);
   });
 })();

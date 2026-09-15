@@ -108,8 +108,8 @@ button { font-family: var(--font); cursor: pointer; border: none; background: no
   box-shadow: 0 4px 32px rgba(0,0,0,0.3);
 }
 .nav-inner {
-  max-width: var(--max-w); margin-inline: auto; padding-inline: var(--pad-x);
   display: flex; align-items: center; justify-content: space-between;
+  width: 100%; padding-inline: var(--pad-x);
 }
 .nav-logo {
   font-family: var(--mono); font-size: 0.95rem; font-weight: 700; color: var(--text);
