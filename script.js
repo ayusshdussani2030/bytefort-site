@@ -217,18 +217,21 @@ const SERVICES = [
       
       const data = await res.json();
       
+      // Validate response shape
+      if (!Array.isArray(data.services)) {
+        throw new Error('Unexpected response shape');
+      }
+      
       // Check if any services are down
       let onlineCount = 0;
       let degraded = false;
       
-      if (data.services) {
-        data.services.forEach(function (s) {
-          if (s.healthy) onlineCount++;
-          else if (s.degraded) degraded = true;
-        });
-      }
+      data.services.forEach(function (s) {
+        if (s.healthy) onlineCount++;
+        else if (s.degraded) degraded = true;
+      });
       
-      const total = data.services ? data.services.length : SERVICES.length;
+      const total = data.services.length;
       const pct = total > 0 ? Math.round((onlineCount / total) * 100) : 0;
       
       if (total > 0 && onlineCount === total) {
@@ -261,6 +264,68 @@ const SERVICES = [
       });
     });
   }
+})();
+
+// ── Historical Uptime ─────────────────────────────────────
+(function () {
+  const UPTIME_API = 'https://api.bytefort.xyz/uptime';
+  
+  function applyUptimeData(data) {
+    if (!data || !Array.isArray(data.services)) return;
+    
+    // Update service cards with progress bars and footer status
+    document.querySelectorAll('.svc-card').forEach(function (card) {
+      const name = card.dataset.name;
+      if (!name) return;
+      
+      const svc = data.services.find(function (s) { return s.name === name; });
+      if (!svc) return;
+      
+      // Set CSS custom property for progress bar width
+      card.style.setProperty('--uptime-pct', svc.uptimePct + '%');
+      
+      // Update footer status and dot in sync with health check
+      const statusEl = card.querySelector('.svc-status span:last-child');
+      const dot = card.querySelector('.svc-dot');
+      
+      if (svc.lastStatus === 'online' && !svc.downtimeStart) {
+        if (statusEl) statusEl.textContent = 'active';
+        if (dot) dot.classList.remove('offline');
+        card.classList.remove('offline');
+      } else {
+        if (svc.downtimeStart) {
+          if (statusEl) statusEl.textContent = 'outage';
+        } else {
+          if (statusEl) statusEl.textContent = 'offline';
+        }
+        if (dot) dot.classList.add('offline');
+        card.classList.add('offline');
+      }
+    });
+  }
+  
+  async function fetchUptimeData() {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(function () { controller.abort(); }, 5000);
+      
+      const res = await fetch(UPTIME_API, { signal: controller.signal });
+      clearTimeout(timeout);
+      
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      
+      const data = await res.json();
+      applyUptimeData(data);
+    } catch (err) {
+      console.warn('Uptime fetch failed:', err.message);
+    }
+  }
+  
+  // Fetch historical uptime data
+  fetchUptimeData();
+  
+  // Refresh every 2 minutes
+  setInterval(fetchUptimeData, 120000);
 })();
 
 // ── Scroll Progress ───────────────────────────────────────

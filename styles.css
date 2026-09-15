@@ -459,10 +459,10 @@ button { font-family: var(--font); cursor: pointer; border: none; background: no
 }
 .svc-card::before {
   content: '';
-  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  position: absolute; top: 0; left: 0; width: var(--uptime-pct, 0%); height: 2px;
   background: linear-gradient(90deg, var(--cat-color, var(--cyan)), transparent);
   opacity: 0.7;
-  transition: opacity 0.4s var(--ease);
+  transition: width 1.2s var(--ease-out), opacity 0.4s var(--ease);
 }
 .svc-card:hover {
   border-color: var(--line-mid);
