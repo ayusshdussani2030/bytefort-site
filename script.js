@@ -20,7 +20,51 @@ const SERVICES = [
   const el = document.getElementById('uptimeDays');
   if (!el) return;
   const since = new Date('2024-03-01');
-  el.textContent = Math.floor((Date.now() - since) / 86400000);
+  const days = Math.floor((Date.now() - since) / 86400000);
+  el.textContent = days;
+})();
+
+// ── Typing Animation ────────────────────────────────────
+(function () {
+  const el = document.getElementById('typedText');
+  if (!el) return;
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const phrases = [
+    '9 services. Zero cloud. Real hardware.',
+    'Self-hosted. Always on.',
+    'Built on bare metal. Managed from anywhere.',
+    'Your infrastructure, your rules.'
+  ];
+  let phraseIndex = 0;
+  let charIndex = 0;
+  let isDeleting = false;
+  let tick;
+
+  function type() {
+    const current = phrases[phraseIndex];
+    if (reducedMotion) {
+      el.textContent = current;
+      return;
+    }
+    if (!isDeleting) {
+      el.textContent = current.substring(0, charIndex + 1);
+      charIndex++;
+      if (charIndex === current.length) {
+        tick = setTimeout(function () { isDeleting = true; tick = setTimeout(type, 2000); }, 2000);
+        return;
+      }
+    } else {
+      el.textContent = current.substring(0, charIndex - 1);
+      charIndex--;
+      if (charIndex === 0) {
+        isDeleting = false;
+        phraseIndex = (phraseIndex + 1) % phrases.length;
+      }
+    }
+    tick = setTimeout(type, isDeleting ? 40 : 70);
+  }
+
+  setTimeout(type, 1000);
 })();
 
 // ── Render Services ─────────────────────────────────────
@@ -260,6 +304,7 @@ const SERVICES = [
       const open = hamburger.classList.toggle('open');
       menu.classList.toggle('open', open);
       menu.setAttribute('aria-hidden', String(!open));
+      hamburger.setAttribute('aria-expanded', String(open));
       document.body.style.overflow = open ? 'hidden' : '';
     });
     
@@ -394,5 +439,41 @@ const SERVICES = [
   window.addEventListener('resize', function () {
     resize();
     createParticles();
+  });
+})();
+
+// ── Scroll Reveal ───────────────────────────────────────
+(function () {
+  const reveals = document.querySelectorAll('.reveal-up');
+  if (!reveals.length) return;
+  
+  const observer = new IntersectionObserver(function (entries) {
+    entries.forEach(function (entry) {
+      if (entry.isIntersecting) {
+        const delay = Math.min(parseInt(entry.target.dataset.index || 0, 10) % 6, 5) * 80;
+        setTimeout(function () {
+          entry.target.classList.add('visible');
+        }, delay);
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+  
+  reveals.forEach(function (el, i) {
+    el.dataset.index = i;
+    observer.observe(el);
+  });
+})();
+
+// ── Spec Card Mouse Tracking ────────────────────────────
+(function () {
+  if (window.matchMedia('(hover: none)').matches) return;
+  const cards = document.querySelectorAll('.spec-card');
+  cards.forEach(function (card) {
+    card.addEventListener('mousemove', function (e) {
+      const rect = card.getBoundingClientRect();
+      card.style.setProperty('--mouse-x', (e.clientX - rect.left) + 'px');
+      card.style.setProperty('--mouse-y', (e.clientY - rect.top) + 'px');
+    });
   });
 })();

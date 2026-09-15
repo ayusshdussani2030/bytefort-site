@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>bytefort.xyz — Services</title>
-  <meta name="description" content="Self-hosted services dashboard. 9 services running on bare metal." />
+  <title>bytefort.xyz — Self-Hosted Services</title>
+  <meta name="description" content="9 self-hosted services on bare metal hardware. Zero cloud." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <link rel="stylesheet" href="styles.css" />
 </head>
@@ -27,7 +27,7 @@
         <span class="status-dot" id="navDot"></span>
         <span class="status-text" id="navText">CHECKING</span>
       </div>
-      <button class="hamburger" id="hamburger" aria-label="Menu">
+      <button class="hamburger" id="hamburger" aria-label="Menu" aria-expanded="false">
         <span></span><span></span><span></span>
       </button>
     </div>
@@ -38,6 +38,8 @@
 <div class="mobile-menu" id="mobileMenu" aria-hidden="true">
   <ul>
     <li><a href="#services" class="mobile-link">Services</a></li>
+    <li><a href="#specs" class="mobile-link">Specs</a></li>
+    <li><a href="#about" class="mobile-link">About</a></li>
   </ul>
   <div class="mobile-status"><span class="status-dot"></span><span>All systems operational</span></div>
 </div>
@@ -45,14 +47,18 @@
 <!-- HERO -->
 <section class="s-hero">
   <canvas id="heroCanvas"></canvas>
+  <div class="hero-orb hero-orb--1"></div>
+  <div class="hero-orb hero-orb--2"></div>
   <div class="hero-content">
-    <div class="hero-eyebrow">
+    <div class="hero-eyebrow reveal-up">
       <span class="status-dot"></span>
       <span class="mono">// SELF-HOSTED SERVICES</span>
     </div>
-    <h1 class="hero-name">SERVICES</h1>
-    <p class="hero-desc">9 services. Zero cloud. Real hardware.</p>
-    <div class="hero-stats">
+    <h1 class="hero-name reveal-up">
+      <span class="gradient-text">SERVICES</span>
+    </h1>
+    <p class="hero-desc reveal-up"><span class="typed-text" id="typedText"></span></p>
+    <div class="hero-stats reveal-up">
       <div class="hs-item">
         <span class="hs-num mono" id="svcCount">—</span>
         <span class="hs-label mono">Services</span>
@@ -68,24 +74,161 @@
         <span class="hs-label mono">Uptime</span>
       </div>
     </div>
-    <button class="btn-outline-cyber" id="checkBtn">REFRESH STATUS</button>
+    <div class="hero-actions reveal-up">
+      <a href="#services" class="btn-primary">View Services</a>
+      <button class="btn-outline" id="checkBtn">Refresh Status</button>
+    </div>
   </div>
 </section>
 
 <!-- SERVICES -->
 <section class="s-services" id="services">
   <div class="container">
+    <div class="section-header">
+      <span class="section-tag mono reveal-up">01</span>
+      <h2 class="section-title reveal-up">Active Services</h2>
+      <p class="section-sub reveal-up">Running on bare metal. Zero cloud dependency.</p>
+    </div>
     <div class="offline-banner" id="offlineBanner">
       <span class="status-dot offline"></span>
       <span id="offlineMsg">Connection lost — showing last known status</span>
     </div>
     <div class="filter-bar" role="group" aria-label="Filter by category">
-      <button class="filter-btn active" data-filter="all">all</button>
-      <button class="filter-btn" data-filter="infrastructure">infrastructure</button>
-      <button class="filter-btn" data-filter="media">media</button>
-      <button class="filter-btn" data-filter="network">network</button>
+      <button class="filter-btn active" data-filter="all">All</button>
+      <button class="filter-btn" data-filter="infrastructure">Infrastructure</button>
+      <button class="filter-btn" data-filter="media">Media</button>
+      <button class="filter-btn" data-filter="network">Network</button>
     </div>
     <div class="services-grid" id="servicesGrid"></div>
+  </div>
+</section>
+
+<!-- TECH STACK MARQUEE -->
+<section class="s-marquee">
+  <div class="marquee-track">
+    <div class="marquee-content">
+      <span>VMware</span><span class="marquee-sep">◆</span>
+      <span>Cloudflare</span><span class="marquee-sep">◆</span>
+      <span>Debian</span><span class="marquee-sep">◆</span>
+      <span>Docker</span><span class="marquee-sep">◆</span>
+      <span>Jellyfin</span><span class="marquee-sep">◆</span>
+      <span>Authentik</span><span class="marquee-sep">◆</span>
+      <span>qBittorrent</span><span class="marquee-sep">◆</span>
+      <span>Radarr</span><span class="marquee-sep">◆</span>
+      <span>Sonarr</span><span class="marquee-sep">◆</span>
+      <span>Nginx</span><span class="marquee-sep">◆</span>
+      <span>Linux</span><span class="marquee-sep">◆</span>
+      <span>Git</span><span class="marquee-sep">◆</span>
+      <span>VMware</span><span class="marquee-sep">◆</span>
+      <span>Cloudflare</span><span class="marquee-sep">◆</span>
+      <span>Debian</span><span class="marquee-sep">◆</span>
+      <span>Docker</span><span class="marquee-sep">◆</span>
+      <span>Jellyfin</span><span class="marquee-sep">◆</span>
+      <span>Authentik</span><span class="marquee-sep">◆</span>
+      <span>qBittorrent</span><span class="marquee-sep">◆</span>
+      <span>Radarr</span><span class="marquee-sep">◆</span>
+      <span>Sonarr</span><span class="marquee-sep">◆</span>
+      <span>Nginx</span><span class="marquee-sep">◆</span>
+      <span>Linux</span><span class="marquee-sep">◆</span>
+      <span>Git</span><span class="marquee-sep">◆</span>
+    </div>
+  </div>
+</section>
+
+<!-- SPECS -->
+<section class="s-specs" id="specs">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-tag mono reveal-up">02</span>
+      <h2 class="section-title reveal-up">Hardware Specs</h2>
+      <p class="section-sub reveal-up">Enterprise-grade bare metal, running 24/7.</p>
+    </div>
+    <div class="specs-grid">
+      <div class="spec-card reveal-up">
+        <div class="spec-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>
+        </div>
+        <h3 class="spec-title">CPU</h3>
+        <p class="spec-value mono">2x Xeon E5-2650</p>
+        <p class="spec-desc">16 Cores / 32 Threads Total</p>
+      </div>
+      <div class="spec-card reveal-up">
+        <div class="spec-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 19v-8a2 2 0 012-2h8a2 2 0 012 2v8"/><rect x="2" y="19" width="20" height="4" rx="1"/><path d="M8 10v0"/><path d="M12 10v0"/><path d="M16 10v0"/></svg>
+        </div>
+        <h3 class="spec-title">Memory</h3>
+        <p class="spec-value mono">64GB DDR3 ECC</p>
+        <p class="spec-desc">Error-Correcting Server RAM</p>
+      </div>
+      <div class="spec-card reveal-up">
+        <div class="spec-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><line x1="6" y1="12" x2="6" y2="12.01"/><line x1="10" y1="12" x2="10" y2="12.01"/></svg>
+        </div>
+        <h3 class="spec-title">Storage</h3>
+        <p class="spec-value mono">4.76TB VMFS</p>
+        <p class="spec-desc">Enterprise RAID Array</p>
+      </div>
+      <div class="spec-card reveal-up">
+        <div class="spec-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2"/><path d="M7 9h3v3H7z"/><path d="M14 9h3v3h-3z"/><path d="M7 16h3v3H7z"/></svg>
+        </div>
+        <h3 class="spec-title">Hypervisor</h3>
+        <p class="spec-value mono">VMware ESXi</p>
+        <p class="spec-desc">Virtualization Layer</p>
+      </div>
+      <div class="spec-card reveal-up">
+        <div class="spec-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+        </div>
+        <h3 class="spec-title">Network</h3>
+        <p class="spec-value mono">Cloudflare Tunnel</p>
+        <p class="spec-desc">Zero open ports, global CDN</p>
+      </div>
+      <div class="spec-card reveal-up">
+        <div class="spec-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        </div>
+        <h3 class="spec-title">Power</h3>
+        <p class="spec-value mono">~65W Idle</p>
+        <p class="spec-desc">24/7 always-on efficiency</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ABOUT / ABOUT -->
+<section class="s-about" id="about">
+  <div class="container">
+    <div class="about-content">
+      <div class="section-header about-header">
+        <span class="section-tag mono reveal-up">03</span>
+        <h2 class="section-title reveal-up">About This Setup</h2>
+      </div>
+      <div class="about-grid">
+        <div class="about-card reveal-up">
+          <h3>Why Self-Host?</h3>
+          <p>Full control over data, privacy, and performance. No vendor lock-in, no unexpected price hikes, no terms of service changes. My infrastructure, my rules.</p>
+        </div>
+        <div class="about-card reveal-up">
+          <h3>Bare Metal</h3>
+          <p>Running on a Dell PowerEdge R720 server with dual Xeon processors. No virtualization overhead — every service gets direct hardware access when needed.</p>
+        </div>
+        <div class="about-card reveal-up">
+          <h3>Zero Cloud</h3>
+          <p>All services run on-premise. Cloudflare Tunnel provides secure internet access without opening any ports. Data never leaves my hardware unless I route it.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="s-cta">
+  <div class="container">
+    <div class="cta-content">
+      <h2 class="cta-title reveal-up">Always on. Always yours.</h2>
+      <p class="cta-sub reveal-up">Running on bare metal hardware. No vendor lock-in. No surprise bills. Just your infrastructure, working 24/7.</p>
+    </div>
   </div>
 </section>
 
