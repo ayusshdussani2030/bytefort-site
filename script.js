@@ -148,6 +148,8 @@ const SERVICES = [
   const offlineBanner = document.getElementById('offlineBanner');
   const offlineMsg = document.getElementById('offlineMsg');
   const checkBtn = document.getElementById('checkBtn');
+  const uptimePct = document.getElementById('uptimePct');
+  const uptimeSuf = document.getElementById('uptimeSuf');
   
   let isOnline = false;
   let lastStatus = 'checking';
