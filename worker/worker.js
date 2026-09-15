@@ -39,13 +39,10 @@ async function pingHost(host, timeout) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeout);
 
-    const target = new URL(host);
-    target.searchParams.set('_cb', Date.now().toString());
-
-    const response = await fetch(target.toString(), {
+    const response = await fetch(host, {
       signal: controller.signal,
       redirect: 'manual',
-      headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' },
+      headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache', 'Cache-Buster': Date.now().toString() },
       cf: { cacheEverything: false, cacheTtl: 0 },
     });
 
