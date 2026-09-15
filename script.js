@@ -50,7 +50,7 @@ const SERVICES = [
       el.textContent = current.substring(0, charIndex + 1);
       charIndex++;
       if (charIndex === current.length) {
-        tick = setTimeout(function () { isDeleting = true; tick = setTimeout(type, 2000); }, 2000);
+        tick = setTimeout(function () { isDeleting = true; type(); }, 2000);
         return;
       }
     } else {
@@ -267,13 +267,23 @@ const SERVICES = [
 (function () {
   const bar = document.getElementById('progressBar');
   if (!bar) return;
-  
-  window.addEventListener('scroll', function () {
+  let frame = 0;
+
+  function update() {
+    frame = 0;
     const scrollTop = window.scrollY;
     const docHeight = document.documentElement.scrollHeight - window.innerHeight;
     const progress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
     bar.style.width = progress + '%';
+  }
+
+  window.addEventListener('scroll', function () {
+    if (!frame) frame = requestAnimationFrame(update);
   }, { passive: true });
+  window.addEventListener('resize', function () {
+    if (!frame) frame = requestAnimationFrame(update);
+  }, { passive: true });
+  update();
 })();
 
 // ── Mouse Glow ────────────────────────────────────────────
@@ -300,31 +310,55 @@ const SERVICES = [
   }
   
   if (hamburger && menu) {
+    const links = menu.querySelectorAll('.mobile-link');
+
+    function closeMenu(restoreFocus) {
+      hamburger.classList.remove('open');
+      menu.classList.remove('open');
+      menu.setAttribute('aria-hidden', 'true');
+      menu.inert = true;
+      hamburger.setAttribute('aria-expanded', 'false');
+      document.body.style.overflow = '';
+      if (restoreFocus) hamburger.focus();
+    }
+
     hamburger.addEventListener('click', function () {
       const open = hamburger.classList.toggle('open');
       menu.classList.toggle('open', open);
       menu.setAttribute('aria-hidden', String(!open));
+      menu.inert = !open;
       hamburger.setAttribute('aria-expanded', String(open));
       document.body.style.overflow = open ? 'hidden' : '';
+      if (open && links.length) links[0].focus();
     });
     
-    document.querySelectorAll('.mobile-link').forEach(function (link) {
+    links.forEach(function (link) {
       link.addEventListener('click', function () {
-        hamburger.classList.remove('open');
-        menu.classList.remove('open');
-        menu.setAttribute('aria-hidden', 'true');
-        document.body.style.overflow = '';
+        closeMenu(true);
       });
     });
     
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && menu.classList.contains('open')) {
-        hamburger.classList.remove('open');
-        menu.classList.remove('open');
-        menu.setAttribute('aria-hidden', 'true');
-        document.body.style.overflow = '';
+        closeMenu(true);
+      } else if (e.key === 'Tab' && menu.classList.contains('open') && links.length) {
+        const first = links[0];
+        const last = links[links.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
       }
     });
+
+    window.addEventListener('resize', function () {
+      if (window.matchMedia('(min-width: 769px)').matches && menu.classList.contains('open')) {
+        closeMenu(false);
+      }
+    }, { passive: true });
   }
 })();
 
@@ -343,19 +377,29 @@ const SERVICES = [
   let resizing = false;
   
   function resize() {
-    dpr = window.devicePixelRatio || 1;
+    const oldW = w;
+    const oldH = h;
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
     w = canvas.offsetWidth;
     h = canvas.offsetHeight;
+    if (!w || !h) return;
     canvas.width = w * dpr;
     canvas.height = h * dpr;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    resizeParticles();
+    resizeParticles(oldW, oldH);
   }
   
-  function resizeParticles() {
+  function resizeParticles(oldW, oldH) {
     const count = Math.min(80, Math.floor((w * h) / 15000));
     if (particles.length === count) {
-      // Only recenter if size changed significantly
+      if (oldW && oldH) {
+        const scaleX = w / oldW;
+        const scaleY = h / oldH;
+        particles.forEach(function (p) {
+          p.x *= scaleX;
+          p.y *= scaleY;
+        });
+      }
       particles.forEach(function (p) {
         if (p.x > w) p.x = Math.random() * w;
         if (p.y > h) p.y = Math.random() * h;
@@ -476,10 +520,13 @@ const SERVICES = [
     requestAnimationFrame(function () {
       resize();
       resizing = false;
-      if (!reducedMotion && canvas.parentElement) {
+      if (!reducedMotion && w && h && canvas.parentElement) {
         var r = canvas.parentElement.getBoundingClientRect();
         var inView = r.bottom > 0 && r.top < window.innerHeight;
-        if (inView) draw(0);
+        if (inView) {
+          lastTime = 0;
+          draw(0);
+        }
       }
     });
   });
