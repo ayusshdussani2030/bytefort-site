@@ -148,8 +148,6 @@ const SERVICES = [
   const offlineBanner = document.getElementById('offlineBanner');
   const offlineMsg = document.getElementById('offlineMsg');
   const checkBtn = document.getElementById('checkBtn');
-  const uptimePct = document.getElementById('uptimePct');
-  const uptimeSuf = document.getElementById('uptimeSuf');
   
   let isOnline = false;
   let lastStatus = 'checking';
@@ -272,6 +270,12 @@ const SERVICES = [
   
   function applyUptimeData(data) {
     if (!data || !Array.isArray(data.services)) return;
+    
+    // Update hero with historical overall uptime
+    const uptimePctEl = document.getElementById('uptimePct');
+    if (uptimePctEl && data.overallUptime !== undefined) {
+      uptimePctEl.textContent = data.overallUptime;
+    }
     
     // Update service cards with progress bars and footer status
     document.querySelectorAll('.svc-card').forEach(function (card) {
