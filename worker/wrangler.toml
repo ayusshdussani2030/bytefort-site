@@ -2,25 +2,18 @@ name = "bytefort-metrics"
 main = "worker.js"
 compatibility_date = "2026-01-01"
 
-# KV namespace binding — after creating the namespace, replace the ID below
-# Cloudflare dashboard -> Workers & Pages -> bytefort-metrics -> Settings -> KV
-# Bind a namespace named BYTEFORT_UPTIME
+# KV namespace binding
 kv_namespaces = [
-  { binding = "BYTEFORT_UPTIME", id = "YOUR_KV_NAMESPACE_ID_HERE" }
+  { binding = "BYTEFORT_UPTIME", id = "f374a1f437ff441885ae7ae781a15a36" }
 ]
+
+# Routes — already configured in Cloudflare dashboard (Domains & Routes)
+# routes = [
+#   { pattern = "api.bytefort.xyz/*", custom_domain = true }
+# ]
 
 # Cron trigger — accumulates uptime every 5 minutes
 [triggers]
 crons = [
   "*/5 * * * *"
 ]
-
-# After first deploy, add a route so this worker answers at api.bytefort.xyz.
-# Easiest: Cloudflare dashboard -> Workers & Pages -> bytefort-metrics -> Settings
-# -> Domains & Routes -> Add -> Custom Domain -> api.bytefort.xyz
-# (only works if bytefort.xyz's DNS is on this same Cloudflare account)
-#
-# Or declare it here instead of the dashboard:
-# routes = [
-#   { pattern = "api.bytefort.xyz/*", custom_domain = true }
-# ]
