@@ -248,8 +248,11 @@ const SERVICES = [
 (function () {
   const UPTIME_API = 'https://api.bytefort.xyz/uptime';
   const TRACKING_EPOCH = new Date('2026-09-16T16:25:00Z').getTime();
+  let uptimeSample = null;
+  let sampleReceivedAt = 0;
   
   function clearUptimeDisplay() {
+    uptimeSample = null;
     const uptimePctEl = document.getElementById('uptimePct');
     const uptimeSufEl = document.getElementById('uptimeSuf');
     const uptimeDaysEl = document.getElementById('uptimeDays');
@@ -262,27 +265,31 @@ const SERVICES = [
   }
 
   function applyUptimeData(data) {
-    if (!data || !Array.isArray(data.services)) {
+    if (!data || data.estimation !== 'last-recorded-state' || !Array.isArray(data.services)) {
       clearUptimeDisplay();
       return;
     }
-    const now = Date.now();
     const responseTime = new Date(data.timestamp).getTime();
-    if (!Number.isFinite(responseTime) || responseTime > now || now - responseTime > 900000) {
+    const elapsed = Math.max(0, sampleReceivedAt - responseTime)
+      + Math.max(0, Date.now() - sampleReceivedAt);
+    if (!Number.isFinite(responseTime) || elapsed > 900000) {
       clearUptimeDisplay();
       return;
     }
-    clearUptimeDisplay();
+    // Advance the server's sample locally, without extra requests or KV writes.
+    const now = responseTime + elapsed;
     const knownNames = SERVICES.map(function (service) { return service.name; });
     const validServices = data.services.filter(function (service) {
       const trackingStart = service ? new Date(service.trackingStart).getTime() : NaN;
       const lastCheck = service ? new Date(service.lastCheck).getTime() : NaN;
       return service && typeof service.name === 'string' && knownNames.indexOf(service.name.trim()) !== -1
-        && Number.isFinite(service.uptimePct)
-        && service.uptimePct >= 0 && service.uptimePct <= 100
+        && (service.lastStatus === 'online' || service.lastStatus === 'offline')
+        && Number.isFinite(service.totalUptimeMs) && service.totalUptimeMs >= 0
+        && Number.isFinite(service.observationMs) && service.observationMs >= 0
+        && service.totalUptimeMs <= service.observationMs
         && Number.isFinite(trackingStart)
-        && trackingStart >= TRACKING_EPOCH && trackingStart <= now
-        && Number.isFinite(lastCheck) && lastCheck > trackingStart && lastCheck <= now;
+        && trackingStart >= TRACKING_EPOCH && trackingStart <= responseTime
+        && Number.isFinite(lastCheck) && lastCheck >= trackingStart && lastCheck <= responseTime;
     });
     const uniqueValidNames = new Set(validServices.map(function (service) { return service.name.trim(); }));
     if (data.services.length !== knownNames.length
@@ -292,22 +299,33 @@ const SERVICES = [
       return;
     }
     
-    // Update hero with historical overall uptime
+    const projectedServices = validServices.map(function (service) {
+      const observationMs = service.observationMs + elapsed;
+      const totalUptimeMs = service.totalUptimeMs + (service.lastStatus === 'online' ? elapsed : 0);
+      return {
+        name: service.name.trim(),
+        uptimePct: observationMs > 0 ? totalUptimeMs / observationMs * 100 : null
+      };
+    });
+
+    // Estimated history retains previous downtime across recoveries.
     const uptimePctEl = document.getElementById('uptimePct');
     const uptimeSufEl = document.getElementById('uptimeSuf');
     const uptimeDaysEl = document.getElementById('uptimeDays');
-    const historicalUptime = Math.round(validServices.reduce(function (sum, service) {
+    const historicalUptime = projectedServices.every(function (service) { return service.uptimePct !== null; })
+      ? (projectedServices.reduce(function (sum, service) {
       return sum + service.uptimePct;
-    }, 0) / validServices.length);
+    }, 0) / projectedServices.length).toFixed(2) : null;
     if (uptimePctEl) {
-      uptimePctEl.textContent = historicalUptime;
-      if (uptimeSufEl) uptimeSufEl.hidden = false;
+      uptimePctEl.textContent = historicalUptime === null ? '—' : historicalUptime;
+      uptimePctEl.title = 'Estimated uptime: assumes each last recorded state continues between scheduled checks.';
+      if (uptimeSufEl) uptimeSufEl.hidden = historicalUptime === null;
     }
     const trackingStart = validServices.reduce(function (earliest, service) {
       const serviceStart = new Date(service.trackingStart).getTime();
       return serviceStart < earliest ? serviceStart : earliest;
     }, now);
-    if (uptimeDaysEl && trackingStart < now) {
+    if (uptimeDaysEl && trackingStart <= now) {
       const trackingDays = Math.max(0, (now - trackingStart) / 86400000);
       uptimeDaysEl.textContent = trackingDays.toFixed(1);
     }
@@ -317,40 +335,38 @@ const SERVICES = [
       const name = card.dataset.name;
       if (!name) return;
       
-      const svc = data.services.find(function (s) {
-        const trackingStart = s ? new Date(s.trackingStart).getTime() : NaN;
-        const lastCheck = s ? new Date(s.lastCheck).getTime() : NaN;
-        return s && typeof s.name === 'string' && s.name.trim() === name
-          && Number.isFinite(s.uptimePct)
-          && s.uptimePct >= 0 && s.uptimePct <= 100
-          && Number.isFinite(trackingStart)
-          && trackingStart >= TRACKING_EPOCH && trackingStart <= now
-          && Number.isFinite(lastCheck) && lastCheck > trackingStart && lastCheck <= now;
-      });
+      const svc = projectedServices.find(function (s) { return s.name === name; });
       if (!svc) return;
       
       // Set CSS custom property for progress bar width
       if (Number.isFinite(svc.uptimePct)) {
         card.style.setProperty('--uptime-pct', svc.uptimePct + '%');
+      } else {
+        card.style.removeProperty('--uptime-pct');
       }
     });
   }
   
   async function fetchUptimeData() {
+    const controller = new AbortController();
+    const timeout = setTimeout(function () { controller.abort(); }, 5000);
     try {
-      const controller = new AbortController();
-      const timeout = setTimeout(function () { controller.abort(); }, 5000);
-      
       const res = await fetch(UPTIME_API, { signal: controller.signal });
-      clearTimeout(timeout);
       
       if (!res.ok) throw new Error('HTTP ' + res.status);
       
       const data = await res.json();
+      const responseTime = new Date(data.timestamp).getTime();
+      sampleReceivedAt = Date.now();
+      if (!Number.isFinite(responseTime) || responseTime > sampleReceivedAt + 60000
+        || sampleReceivedAt - responseTime > 900000) throw new Error('Stale uptime response');
+      uptimeSample = data;
       applyUptimeData(data);
     } catch (err) {
       console.warn('Uptime fetch failed:', err.message);
       clearUptimeDisplay();
+    } finally {
+      clearTimeout(timeout);
     }
   }
   
@@ -359,6 +375,9 @@ const SERVICES = [
   
   // Refresh every 2 minutes
   setInterval(fetchUptimeData, 120000);
+  setInterval(function () {
+    if (uptimeSample) applyUptimeData(uptimeSample);
+  }, 1000);
 })();
 
 // ── Scroll Progress ───────────────────────────────────────

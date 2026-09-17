@@ -12,7 +12,7 @@ routes = [
   { pattern = "api.bytefort.xyz", zone_name = "bytefort.xyz", custom_domain = true, enabled = true, previews_enabled = false }
 ]
 
-# Cron trigger — accumulates uptime every 5 minutes
+# Check every 5 minutes; persist only initialization and status changes.
 [triggers]
 crons = [
   "*/5 * * * *"

@@ -18,7 +18,6 @@ const TARGETS = [
 
 const AUTH_GATE = 'outpost.goauthentik.io';
 const STATUS_KEY = 'status';
-const HEARTBEAT_MS = 60 * 60 * 1000;
 
 async function pingHost(host, timeout) {
   const controller = new AbortController();
@@ -81,14 +80,47 @@ function jsonResponse(body, status = 200) {
   });
 }
 
-function statusSnapshot(healthData) {
+function timestampMs(value) {
+  return typeof value === 'string' ? Date.parse(value) : NaN;
+}
+
+function validSnapshot(snapshot, now) {
+  if (snapshot?.version !== 2) return false;
+  const checkpoint = timestampMs(snapshot.checkedAt);
+  if (!Number.isFinite(checkpoint) || checkpoint > now) return false;
+  return TARGETS.every(({ name }) => {
+    const status = snapshot.services?.[name];
+    const accounting = snapshot.accounting?.[name];
+    const start = timestampMs(accounting?.trackingStart);
+    const since = timestampMs(accounting?.statusSince);
+    return (status === 'online' || status === 'offline')
+      && Number.isFinite(start) && start <= checkpoint
+      && Number.isFinite(since) && since >= start && since <= checkpoint
+      && Number.isFinite(accounting?.totalUptimeMs)
+      && accounting.totalUptimeMs >= 0 && accounting.totalUptimeMs <= checkpoint - start;
+  });
+}
+
+function statusSnapshot(healthData, previous) {
   const services = {};
+  const accounting = {};
+  const now = timestampMs(healthData.timestamp);
+  const elapsed = previous ? now - timestampMs(previous.checkedAt) : 0;
   for (const service of healthData.services) {
     services[service.name] = service.status;
+    const prior = previous?.accounting[service.name];
+    const priorStatus = previous?.services[service.name];
+    accounting[service.name] = {
+      trackingStart: prior?.trackingStart || healthData.timestamp,
+      statusSince: prior && priorStatus === service.status ? prior.statusSince : healthData.timestamp,
+      totalUptimeMs: (prior?.totalUptimeMs || 0) + (priorStatus === 'online' ? elapsed : 0),
+    };
   }
   return {
+    version: 2,
     checkedAt: healthData.timestamp,
     services,
+    accounting,
   };
 }
 
@@ -99,12 +131,6 @@ function statusesChanged(previous, current) {
     if (previous.services[target.name] !== current.services[target.name]) return true;
   }
   return false;
-}
-
-function heartbeatExpired(previous, now) {
-  if (!previous || typeof previous.checkedAt !== 'string') return true;
-  const checkedAt = new Date(previous.checkedAt).getTime();
-  return !Number.isFinite(checkedAt) || now - checkedAt > HEARTBEAT_MS;
 }
 
 async function readStatusSnapshot(kv) {
@@ -122,45 +148,59 @@ async function updateStatusSnapshot(env, healthData) {
   if (!kv) throw new Error('BYTEFORT_UPTIME binding is not configured');
 
   // Exactly one KV read per scheduled run.
-  const previous = await readStatusSnapshot(kv);
-  const current = statusSnapshot(healthData);
+  const stored = await readStatusSnapshot(kv);
+  // Old status-only records have no history. Start an honest new window once.
+  const previous = validSnapshot(stored, timestampMs(healthData.timestamp)) ? stored : null;
+  const current = statusSnapshot(healthData, previous);
 
-  if (statusesChanged(previous, current) || heartbeatExpired(previous, Date.now())) {
-    // At most one KV write per scheduled run. No expiration is applied.
+  if (statusesChanged(previous, current)) {
+    // One initialization write, then only status flips. No heartbeat or expiration.
     await kv.put(STATUS_KEY, JSON.stringify(current));
   }
 }
 
 function uptimeResponse(snapshot) {
-  const checkedAt = snapshot?.checkedAt || null;
-  const hasSnapshot = Boolean(checkedAt && snapshot?.services);
+  const now = Date.now();
+  const hasSnapshot = validSnapshot(snapshot, now);
+  const checkedAt = hasSnapshot ? snapshot.checkedAt : null;
+  const elapsed = hasSnapshot ? now - timestampMs(checkedAt) : 0;
   const services = TARGETS.map((target) => {
-    const status = snapshot?.services?.[target.name] || 'unknown';
+    const status = hasSnapshot ? snapshot.services[target.name] : 'unknown';
+    const accounting = hasSnapshot ? snapshot.accounting[target.name] : null;
     const online = status === 'online';
+    const observationMs = accounting ? now - timestampMs(accounting.trackingStart) : 0;
+    // Assume the last recorded state continues; reads never persist elapsed time.
+    const totalUptimeMs = accounting ? accounting.totalUptimeMs + (online ? elapsed : 0) : null;
+    const uptimePct = observationMs > 0 ? (totalUptimeMs / observationMs) * 100 : null;
     return {
       name: target.name,
-      uptimePct: online ? 100 : status === 'offline' ? 0 : null,
-      totalUptimeMs: hasSnapshot ? 0 : null,
-      trackingStart: hasSnapshot ? checkedAt : null,
-      observationMs: hasSnapshot ? 0 : 0,
-      trackingDays: hasSnapshot ? 0 : null,
+      uptimePct,
+      totalUptimeMs,
+      trackingStart: accounting?.trackingStart || null,
+      observationMs,
+      trackingDays: accounting ? observationMs / 86400000 : null,
       lastCheck: checkedAt,
       lastStatus: status,
-      downtimeStart: online ? null : checkedAt,
+      statusSince: accounting?.statusSince || null,
+      downtimeStart: status === 'offline' ? accounting.statusSince : null,
       downtimeEvents: [],
     };
   });
   const observed = services.filter((service) => service.uptimePct !== null);
   const overallUptime = observed.length
-    ? Math.round(observed.reduce((sum, service) => sum + service.uptimePct, 0) / observed.length)
+    ? observed.reduce((sum, service) => sum + service.uptimePct, 0) / observed.length
+    : null;
+  const trackingStartedAt = hasSnapshot
+    ? new Date(Math.min(...services.map((service) => timestampMs(service.trackingStart)))).toISOString()
     : null;
 
   return {
     services,
-    timestamp: new Date().toISOString(),
-    trackingStartedAt: hasSnapshot ? checkedAt : null,
-    trackingDays: hasSnapshot ? 0 : null,
-    trackedServices: hasSnapshot ? observed.length : 0,
+    timestamp: new Date(now).toISOString(),
+    estimation: 'last-recorded-state',
+    trackingStartedAt,
+    trackingDays: hasSnapshot ? (now - timestampMs(trackingStartedAt)) / 86400000 : null,
+    trackedServices: hasSnapshot ? services.length : 0,
     overallUptime,
   };
 }
