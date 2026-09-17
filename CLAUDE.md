@@ -35,7 +35,7 @@ Service card category theming uses `:has([data-cat="..."])` to set `--cat-color`
 ## script.js — IIFEs in order
 
 0. **Boot intro overlay** — fills `#biBar` and cycles status text over 1.7s via rAF, then fades `.boot-intro` out and removes it.
-0c. **Live uptime counter** — sets `#uptimeDays` to days elapsed since `2024-03-01`.
+0c. **Historical uptime display** — sets `#uptimeDays` and `#uptimePct` from the uptime API's current tracking window.
 0d. **Scroll to top** — shows `#toTop` after 700px scroll; smooth-scrolls to top on click.
 0e. **Clipboard copy** — clicking `#sshCmd` writes `ping bytefort.xyz` to clipboard; shows `#toast` for 2.2s with fallback text on clipboard API failure.
 0f. **Text scramble** — on intersection of `.section-tag` elements, scrambles characters via rAF using `CHARS = '!<>-_\\/[]{}=+*^?#@~01'` before resolving to real text. No-ops on `prefers-reduced-motion`.

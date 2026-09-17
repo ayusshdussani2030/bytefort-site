@@ -15,15 +15,6 @@ const SERVICES = [
   { name: 'Vaultwarden', url: 'https://vault.bytefort.xyz', cat: 'infrastructure', desc: 'Self-hosted password vault. Secure credential management for your family.', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>' }
 ];
 
-// ── 0c. Uptime Counter ──────────────────────────────────
-(function () {
-  const el = document.getElementById('uptimeDays');
-  if (!el) return;
-  const since = new Date('2024-03-01');
-  const days = Math.floor((Date.now() - since) / 86400000);
-  el.textContent = days;
-})();
-
 // ── Typing Animation ────────────────────────────────────
 (function () {
   const el = document.getElementById('typedText');
@@ -148,8 +139,6 @@ const SERVICES = [
   const offlineBanner = document.getElementById('offlineBanner');
   const offlineMsg = document.getElementById('offlineMsg');
   const checkBtn = document.getElementById('checkBtn');
-  const uptimePct = document.getElementById('uptimePct');
-  const uptimeSuf = document.getElementById('uptimeSuf');
   
   let isOnline = false;
   let lastStatus = 'checking';
@@ -177,17 +166,6 @@ const SERVICES = [
       offlineBanner.classList.toggle('show', !online);
       if (!online) {
         offlineMsg.textContent = 'Connection lost — showing last known status';
-      }
-    }
-    
-    // Uptime percentage
-    if (uptimePct) {
-      if (pct !== undefined) {
-        uptimePct.textContent = pct;
-        if (uptimeSuf) uptimeSuf.hidden = false;
-      } else if (!online) {
-        uptimePct.textContent = 'N/A';
-        if (uptimeSuf) uptimeSuf.hidden = true;
       }
     }
     
@@ -269,43 +247,91 @@ const SERVICES = [
 // ── Historical Uptime ─────────────────────────────────────
 (function () {
   const UPTIME_API = 'https://api.bytefort.xyz/uptime';
+  const TRACKING_EPOCH = new Date('2026-09-16T16:25:00Z').getTime();
   
+  function clearUptimeDisplay() {
+    const uptimePctEl = document.getElementById('uptimePct');
+    const uptimeSufEl = document.getElementById('uptimeSuf');
+    const uptimeDaysEl = document.getElementById('uptimeDays');
+    if (uptimePctEl) uptimePctEl.textContent = '—';
+    if (uptimeSufEl) uptimeSufEl.hidden = true;
+    if (uptimeDaysEl) uptimeDaysEl.textContent = '—';
+    document.querySelectorAll('.svc-card').forEach(function (card) {
+      card.style.removeProperty('--uptime-pct');
+    });
+  }
+
   function applyUptimeData(data) {
-    if (!data || !Array.isArray(data.services)) return;
+    if (!data || !Array.isArray(data.services)) {
+      clearUptimeDisplay();
+      return;
+    }
+    const now = Date.now();
+    const responseTime = new Date(data.timestamp).getTime();
+    if (!Number.isFinite(responseTime) || responseTime > now || now - responseTime > 900000) {
+      clearUptimeDisplay();
+      return;
+    }
+    clearUptimeDisplay();
+    const knownNames = SERVICES.map(function (service) { return service.name; });
+    const validServices = data.services.filter(function (service) {
+      const trackingStart = service ? new Date(service.trackingStart).getTime() : NaN;
+      const lastCheck = service ? new Date(service.lastCheck).getTime() : NaN;
+      return service && typeof service.name === 'string' && knownNames.indexOf(service.name.trim()) !== -1
+        && Number.isFinite(service.uptimePct)
+        && service.uptimePct >= 0 && service.uptimePct <= 100
+        && Number.isFinite(trackingStart)
+        && trackingStart >= TRACKING_EPOCH && trackingStart <= now
+        && Number.isFinite(lastCheck) && lastCheck > trackingStart && lastCheck <= now;
+    });
+    const uniqueValidNames = new Set(validServices.map(function (service) { return service.name.trim(); }));
+    if (data.services.length !== knownNames.length
+      || validServices.length !== knownNames.length
+      || uniqueValidNames.size !== knownNames.length) {
+      clearUptimeDisplay();
+      return;
+    }
     
     // Update hero with historical overall uptime
     const uptimePctEl = document.getElementById('uptimePct');
-    if (uptimePctEl && data.overallUptime !== undefined) {
-      uptimePctEl.textContent = data.overallUptime;
+    const uptimeSufEl = document.getElementById('uptimeSuf');
+    const uptimeDaysEl = document.getElementById('uptimeDays');
+    const historicalUptime = Math.round(validServices.reduce(function (sum, service) {
+      return sum + service.uptimePct;
+    }, 0) / validServices.length);
+    if (uptimePctEl) {
+      uptimePctEl.textContent = historicalUptime;
+      if (uptimeSufEl) uptimeSufEl.hidden = false;
+    }
+    const trackingStart = validServices.reduce(function (earliest, service) {
+      const serviceStart = new Date(service.trackingStart).getTime();
+      return serviceStart < earliest ? serviceStart : earliest;
+    }, now);
+    if (uptimeDaysEl && trackingStart < now) {
+      const trackingDays = Math.max(0, (now - trackingStart) / 86400000);
+      uptimeDaysEl.textContent = trackingDays.toFixed(1);
     }
     
-    // Update service cards with progress bars and footer status
+    // Update service cards with historical progress bars
     document.querySelectorAll('.svc-card').forEach(function (card) {
       const name = card.dataset.name;
       if (!name) return;
       
-      const svc = data.services.find(function (s) { return s.name === name; });
+      const svc = data.services.find(function (s) {
+        const trackingStart = s ? new Date(s.trackingStart).getTime() : NaN;
+        const lastCheck = s ? new Date(s.lastCheck).getTime() : NaN;
+        return s && typeof s.name === 'string' && s.name.trim() === name
+          && Number.isFinite(s.uptimePct)
+          && s.uptimePct >= 0 && s.uptimePct <= 100
+          && Number.isFinite(trackingStart)
+          && trackingStart >= TRACKING_EPOCH && trackingStart <= now
+          && Number.isFinite(lastCheck) && lastCheck > trackingStart && lastCheck <= now;
+      });
       if (!svc) return;
       
       // Set CSS custom property for progress bar width
-      card.style.setProperty('--uptime-pct', svc.uptimePct + '%');
-      
-      // Update footer status and dot in sync with health check
-      const statusEl = card.querySelector('.svc-status span:last-child');
-      const dot = card.querySelector('.svc-dot');
-      
-      if (svc.lastStatus === 'online' && !svc.downtimeStart) {
-        if (statusEl) statusEl.textContent = 'active';
-        if (dot) dot.classList.remove('offline');
-        card.classList.remove('offline');
-      } else {
-        if (svc.downtimeStart) {
-          if (statusEl) statusEl.textContent = 'outage';
-        } else {
-          if (statusEl) statusEl.textContent = 'offline';
-        }
-        if (dot) dot.classList.add('offline');
-        card.classList.add('offline');
+      if (Number.isFinite(svc.uptimePct)) {
+        card.style.setProperty('--uptime-pct', svc.uptimePct + '%');
       }
     });
   }
@@ -324,6 +350,7 @@ const SERVICES = [
       applyUptimeData(data);
     } catch (err) {
       console.warn('Uptime fetch failed:', err.message);
+      clearUptimeDisplay();
     }
   }
   
