@@ -1,0 +1,222 @@
+============================================================
+bytefort.xyz — Website Information Document
+============================================================
+
+OVERVIEW
+--------
+A self-hosted services dashboard built with pure HTML/CSS/JS.
+No frameworks, no build tools, no dependencies beyond Google Fonts.
+Served through Cloudflare CDN with a Cloudflare Worker for health checks.
+
+FILES
+-----
+index.html    — All markup (254 lines)
+styles.css    — All styling (736 lines)
+script.js     — All interactivity (686 lines)
+favicon.svg   — Favicon (5 lines)
+README.md     — Project readme (1 line)
+Total: ~1,681 lines across 5 files
+
+TITLE & DESCRIPTION
+-------------------
+Title: bytefort.xyz — Self-Hosted Services
+Description: 9 self-hosted services on bare metal hardware. Zero cloud.
+
+DOMAINS
+-------
+Main:        bytefort.xyz
+Worker API:  api.bytefort.xyz
+
+DESIGN SYSTEM
+-------------
+Colors:
+  --cyan:       #67e8f9
+  --green:      #4ade80
+  --pink:       #f472b6
+  --purple:     #c4b5fd
+  --amber:      #fcd34d
+  --danger:     #f87171
+  --bg:         #030508
+  --text:       #e2e8f0
+  --text-mid:   #94a3b8
+  --text-dim:   #64748b
+
+Fonts:
+  --font:  'Space Grotesk', system-ui (primary)
+  --mono:  'JetBrains Mono', 'SF Mono' (monospace)
+
+Max width: 1200px
+Padding:   1.25rem–2.5rem (responsive clamp)
+
+SECTIONS
+--------
+1. HERO
+   - Tagline: // SELF-HOSTED SERVICES
+   - Title: SERVICES (gradient text)
+   - Typing animation cycles phrases
+   - Stats: Services | Days Tracked | Estimated Uptime
+   - Buttons: View Services, Refresh Status
+   - Particle canvas background
+   - Mouse-follow glow effect
+
+2. SERVICES (Active Services)
+   - 9 services in a responsive grid
+   - Filter by category: All, Infrastructure, Media, Network
+   - Each card shows: name, icon, category badge, description, URL, status
+   - Clicking a card opens the service URL
+   - Live status updates from health check API
+
+3. TECH STACK MARQUEE
+   - Infinite scrolling list of technologies
+   - VMware, Cloudflare, Debian, Docker, Jellyfin, Authentik,
+     qBittorrent, Radarr, Sonarr, Nginx, Linux, Git
+
+4. HARDWARE SPECS
+   - CPU: 2x Xeon E5-2650 (16 Cores / 32 Threads)
+   - Memory: 64GB DDR3 ECC
+   - Storage: 4.76TB VMFS (Enterprise RAID)
+   - Hypervisor: VMware ESXi
+   - Network: Cloudflare Tunnel (zero open ports)
+   - Power: ~65W Idle
+
+5. ABOUT
+   - Why Self-Host: Full control, privacy, no vendor lock-in
+   - Bare Metal: Dell PowerEdge R720, direct hardware access
+   - Zero Cloud: All on-premise, Cloudflare Tunnel for access
+
+6. FOOTER
+   - Logo: [bf].xyz
+   - Status indicator
+   - Tagline: // Self-hosted. Always on.
+
+SERVICES
+--------
+Infrastructure:
+  1. Authentik       - auth.bytefort.xyz
+     Identity and access management. SSO for all services.
+
+  2. Home Assistant  - homeassistant.bytefort.xyz
+     Open-source home automation platform.
+
+  3. Netbird         - netbird.bytefort.xyz
+     Self-hosted VPN and remote access.
+
+  4. Nginx Proxy     - npm.bytefort.xyz
+     Reverse proxy and SSL management. Routes all subdomains.
+
+  5. Vaultwarden     - vault.bytefort.xyz
+     Self-hosted password vault.
+
+Media:
+  6. Jellyfin        - jellyfin.bytefort.xyz
+     Media streaming server. Movies, TV, music.
+
+  7. Ripper          - ripper.bytefort.xyz
+     Media ripping and conversion.
+
+  8. Jellyseerr      - seerr.bytefort.xyz
+     Media request and discovery.
+
+Network:
+  9. Speed Test      - speedtest.bytefort.xyz
+     Self-hosted network speed test.
+
+HEALTH CHECK WORKER
+-------------------
+Worker name: bytefort-metrics
+Entry point: worker/worker.js
+Binding: BYTEFORT_UPTIME (KV namespace)
+
+Endpoints:
+  GET /health  — Live health check for all services
+  GET /metrics — Alias for /health
+  GET /uptime  — Historical uptime data from KV
+  GET /        — Alias for /health
+
+Health Check Logic:
+  - Checks all 9 services every 5 minutes via cron
+  - Only writes to KV when a service's status changes
+  - No heartbeat, no expiration, no list/delete
+  - Maximum ~288 KV writes/day (one per 5-min window if all flip)
+  - Current config uses ~1-5 writes/day in practice
+
+Uptime Tracking:
+  - Version 2 schema with cumulative uptime accounting
+  - Tracks trackingStart, statusSince, totalUptimeMs per service
+  - Retains past downtime after recovery
+  - Estimates continuation of last recorded state between checks
+  - Dashboard ticks locally without extra KV writes
+
+KV Schema (status key):
+  {
+    version: 2,
+    checkedAt: "ISO-8601 timestamp",
+    services: { ServiceName: "online" | "offline", ... },
+    accounting: {
+      ServiceName: {
+        trackingStart: "ISO-8601",
+        statusSince: "ISO-8601",
+        totalUptimeMs: number
+      }, ...
+    }
+  }
+
+INTERACTIVITY (script.js)
+-------------------------
+1. Boot intro overlay — fills progress bar, cycles status text
+2. Typing animation — cycles taglines with typing/deleting effect
+3. Service cards — generated dynamically with renderCards()
+4. Health check — polls api.bytefort.xyz/metrics every 30s
+5. Historical uptime — fetches /uptime, ticks locally every second
+6. Scroll progress bar — fixed top bar tracks page scroll
+7. Mouse glow — radial gradient follows cursor
+8. Hero canvas — 85-particle network with mouse repulsion
+9. Animated counters — numbers count up when scrolled into view
+10. Navbar — scroll state changes, active link tracking
+11. Scroll reveal — elements fade in with stagger on scroll
+12. 3D card hover — perspective transform on mouse move
+13. Service filter — category-based grid filtering
+14. Mobile menu — hamburger toggle with full-screen overlay
+15. Toast notifications — clipboard copy with 2.2s display
+
+RESPONSIVE BREAKPOINTS
+----------------------
+Max-width 768px:
+  - Single-column service grid
+  - Hamburger menu enabled
+  - Reduced hero padding
+
+Max-width 520px:
+  - Stats stack vertically (column layout)
+  - Separators hidden
+  - Full-width buttons
+
+Min-width 1600px:
+  - Max width expands to 1400px
+  - Specs grid becomes 3 columns
+
+CSP (Content Security Policy)
+------------------------------
+In <meta> tag in index.html:
+  - style-src: self + unsafe-inline + Google Fonts
+  - script-src: self + cloudflareinsights.com
+  - connect-src: self + api.bytefort.xyz + cloudflareinsights.com
+
+REDUCED MOTION
+--------------
+Skips hero canvas, typing animation, telemetry, and text scramble
+when prefers-reduced-motion: reduce is set.
+
+DEPLOYMENT
+----------
+Frontend: Static files served via Cloudflare CDN
+Worker: Deployed with Wrangler via `npx wrangler deploy`
+Routes: api.bytefort.xyz → bytefort-metrics worker
+CSP meta tag must be updated when adding new external resources
+
+RECENT CHANGES
+--------------
+Commit 22a44ca: Fix missing @keyframes heroReveal
+Commit 52ac403: Tighten hero stats layout
+Commit 742ef52: Transition-only KV writes, cumulative uptime
+Commit 887ad2d: KV quota reduction (one conditional write per run)
