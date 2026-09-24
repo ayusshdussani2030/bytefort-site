@@ -16,19 +16,23 @@
       --cyan: #67e8f9;
       --amber: #fcd34d;
       --bg: #05070b;
+      --bg-2: #0c1018;
       --text: #e2e8f0;
       --text-mid: #94a3b8;
       --text-dim: #64748b;
       --line: rgba(148,176,210,0.07);
       --line-mid: rgba(148,176,210,0.14);
-      --font: 'Space Grotesk', system-ui, sans-serif;
-      --mono: 'JetBrains Mono', 'SF Mono', monospace;
+      --font: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, system-ui, sans-serif;
+      --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
     }
 
     html { font-size: 16px; }
 
     body {
-      background: var(--bg);
+      background:
+        radial-gradient(60vw 60vw at 18% 12%, rgba(103,232,249,0.10), transparent 60%),
+        radial-gradient(70vw 70vw at 85% 90%, rgba(252,211,77,0.08), transparent 60%),
+        var(--bg);
       color: var(--text);
       font-family: var(--font);
       min-height: 100vh;
@@ -52,7 +56,13 @@
       z-index: 1;
       text-align: center;
       max-width: 560px;
-      padding: 2rem 1.5rem;
+      width: 90%;
+      padding: 3rem 2.5rem;
+      background: color-mix(in srgb, var(--bg-2) 70%, transparent);
+      border: 1px solid var(--line-mid);
+      border-radius: 20px;
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.2), 0 30px 80px -20px rgba(0,0,0,0.6);
+      backdrop-filter: blur(6px);
     }
 
     .maint-gear {
@@ -158,9 +168,18 @@
     }
 
     @media (max-width: 520px) {
-      .maint-container { padding: 1.5rem 1rem; }
+      .maint-container { padding: 2rem 1.25rem; }
       .maint-gear { width: 48px; height: 48px; margin-bottom: 1.5rem; }
     }
+
+    .maint-service {
+      display: none;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      color: var(--cyan);
+      margin-bottom: 1.25rem;
+    }
+    .maint-service.show { display: block; }
   </style>
 </head>
 <body>
@@ -175,6 +194,8 @@
     </svg>
 
     <div class="maint-badge">UNDER MAINTENANCE</div>
+
+    <div class="maint-service" id="maintService"></div>
 
     <h1 class="maint-title">
       <span class="mono">// SYSTEM MAINTENANCE</span>
@@ -197,8 +218,21 @@
   </div>
 
   <script>
+    var SERVICE_NAMES = {
+      auth: 'Authentik', jellyfin: 'Jellyfin', seerr: 'Jellyseerr',
+      netbird: 'Netbird', npm: 'Nginx Proxy Manager', ripper: 'Ripper',
+      speedtest: 'Speed Test', vault: 'Vaultwarden', homeassistant: 'Home Assistant'
+    };
+
     (function () {
       document.getElementById('updated').textContent = new Date().toLocaleString();
+
+      var svc = new URLSearchParams(location.search).get('service');
+      if (svc && SERVICE_NAMES[svc]) {
+        var svcEl = document.getElementById('maintService');
+        svcEl.textContent = 'You were redirected from ' + SERVICE_NAMES[svc];
+        svcEl.classList.add('show');
+      }
 
       // Fetch maintenance state from the worker
       fetch('/api/bf/maintenance/status')
