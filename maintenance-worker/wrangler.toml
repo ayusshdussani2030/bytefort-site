@@ -7,15 +7,27 @@ kv_namespaces = [
   { binding = "BYTEFORT_MAINT", id = "ab37741543184d84b442d6cb9abf37dd" }
 ]
 
-# Fronts the main dashboard and every service subdomain, so the maintenance
-# gate and partial-maintenance bypass can act on either. The existing
-# api.bytefort.xyz custom domain (bytefort-metrics worker) takes precedence
-# over this wildcard for that one hostname.
+# Only the root host. A `*.bytefort.xyz/*` wildcard was tried and pulled
+# traffic away from the api.bytefort.xyz Custom Domain (a separate worker,
+# bytefort-metrics) instead of falling through to it as expected — Routes and
+# Custom Domains don't compose safely here. Until that's resolved, the
+# partial-maintenance per-subdomain bypass in worker.js has no subdomain
+# traffic to act on.
 routes = [
   { pattern = "bytefort.xyz/*", zone_name = "bytefort.xyz" },
-  { pattern = "www.bytefort.xyz/*", zone_name = "bytefort.xyz" },
-  { pattern = "*.bytefort.xyz/*", zone_name = "bytefort.xyz" }
+  { pattern = "www.bytefort.xyz/*", zone_name = "bytefort.xyz" }
 ]
 
 # Set the admin password as a secret before deploying:
 #   npx wrangler secret put ADMIN_PASSWORD --config maintenance-worker/wrangler.toml
+
+# The root dashboard has no real network origin — it's served entirely from
+# Cloudflare's edge as static assets, matching the existing production setup
+# (this worker has 20+ prior live deployments; it is NOT a fresh/unlaunched
+# project). This table must stay last in the file — TOML assigns any key
+# after a [table] header to that table, so `routes` above would silently
+# become `assets.routes` if placed below this line.
+[assets]
+directory = "../"
+binding = "ASSETS"
+run_worker_first = true

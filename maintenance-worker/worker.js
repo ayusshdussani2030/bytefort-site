@@ -16,6 +16,14 @@ function getSecret(req) {
   return req.headers.get('X-BF-Secret') || '';
 }
 
+// The root domain has no real network origin — it's served entirely from
+// Cloudflare's edge via the ASSETS binding (see [assets] in wrangler.toml).
+function fetchAsset(env, req, pathname) {
+  return env.ASSETS.fetch(new Request(new URL(pathname, req.url), {
+    headers: { Accept: 'text/html' }
+  }));
+}
+
 // Password-only auth (admin is served through Cloudflare — no IP filtering needed)
 function checkAdminAuth(req, env) {
   if (!env.ADMIN_PASSWORD || getSecret(req) !== env.ADMIN_PASSWORD) return json({ error: 'invalid-password' }, 401);
@@ -181,9 +189,7 @@ async function handleRequest(req, env) {
     // ── Serve admin panel ───────────────────────────────
     if (url.pathname === '/admin' || url.pathname === '/admin/') {
       try {
-        const res = await fetch(new Request(new URL('/admin/index.html', req.url), {
-          headers: { 'Accept': 'text/html' }
-        }));
+        const res = await fetchAsset(env, req, '/admin/index.html');
         if (res.ok) {
           const modified = new Response(res.body, res);
           modified.headers.set('Cache-Control', 'no-store');
@@ -213,9 +219,7 @@ async function handleRequest(req, env) {
 
     // Serve maintenance page
     try {
-      const res = await fetch(new Request(new URL('/maintenance/index.html', req.url), {
-        headers: { 'Accept': 'text/html' }
-      }), { cf: { cacheEverything: true } });
+      const res = await fetchAsset(env, req, '/maintenance/index.html');
       if (res.ok) {
         const modified = new Response(res.body, res);
         modified.headers.set('Cache-Control', 'public, max-age=60');
@@ -235,7 +239,14 @@ async function handleRequest(req, env) {
     );
   }
 
-  // ── Proxy everything else ───────────────────────────
+  // ── Serve the static site ────────────────────────────
+  // Only the root host reaches this worker at all (see wrangler.toml routes).
+  // There is no network origin behind it — the dashboard is served entirely
+  // from Cloudflare's edge via the ASSETS binding.
+  if (isRootHost) return env.ASSETS.fetch(req);
+
+  // Any other host reaching this worker would have a real network origin
+  // (e.g. a service subdomain) — kept as a safety net, not currently reachable.
   return fetch(req);
 }
 
