@@ -7,7 +7,7 @@
   <meta name="description" content="Currently under maintenance." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -17,11 +17,12 @@
       --amber: #fcd34d;
       --bg: #05070b;
       --bg-2: #0c1018;
+      --bg-3: #131a28;
       --text: #e2e8f0;
       --text-mid: #94a3b8;
       --text-dim: #64748b;
       --line: rgba(148,176,210,0.07);
-      --line-mid: rgba(148,176,210,0.14);
+      --line-mid: rgba(148,176,210,0.16);
       --font: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, system-ui, sans-serif;
       --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
     }
@@ -30,8 +31,9 @@
 
     body {
       background:
-        radial-gradient(60vw 60vw at 18% 12%, rgba(103,232,249,0.10), transparent 60%),
-        radial-gradient(70vw 70vw at 85% 90%, rgba(252,211,77,0.08), transparent 60%),
+        radial-gradient(50vw 50vw at 15% 8%, rgba(103,232,249,0.16), transparent 60%),
+        radial-gradient(60vw 60vw at 90% 95%, rgba(252,211,77,0.13), transparent 60%),
+        radial-gradient(80vw 80vw at 50% 50%, rgba(148,176,210,0.04), transparent 70%),
         var(--bg);
       color: var(--text);
       font-family: var(--font);
@@ -41,6 +43,20 @@
       justify-content: center;
       overflow: hidden;
       position: relative;
+      padding: 2rem 1rem;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(148,176,210,0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(148,176,210,0.05) 1px, transparent 1px);
+      background-size: 48px 48px;
+      mask-image: radial-gradient(60vw 60vw at 50% 40%, #000, transparent 75%);
+      pointer-events: none;
+      z-index: 0;
     }
 
     canvas#bgCanvas {
@@ -55,93 +71,220 @@
       position: relative;
       z-index: 1;
       text-align: center;
-      max-width: 560px;
-      width: 90%;
-      padding: 3rem 2.5rem;
-      background: color-mix(in srgb, var(--bg-2) 70%, transparent);
+      max-width: 620px;
+      width: 100%;
+      padding: 3.5rem 3rem;
+      background: color-mix(in srgb, var(--bg-2) 78%, transparent);
       border: 1px solid var(--line-mid);
-      border-radius: 20px;
-      box-shadow: 0 0 0 1px rgba(0,0,0,0.2), 0 30px 80px -20px rgba(0,0,0,0.6);
-      backdrop-filter: blur(6px);
+      border-radius: 24px;
+      box-shadow:
+        0 0 0 1px rgba(0,0,0,0.3),
+        0 40px 100px -24px rgba(0,0,0,0.7),
+        0 0 120px -40px rgba(103,232,249,0.25);
+      backdrop-filter: blur(10px);
+      overflow: hidden;
+    }
+
+    .maint-container::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, var(--cyan), var(--amber), transparent);
+      background-size: 200% 100%;
+      animation: sweep 4s linear infinite;
+    }
+
+    @keyframes sweep {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    .maint-logo {
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      color: var(--text-dim);
+      margin-bottom: 2.5rem;
+    }
+
+    .maint-icon-wrap {
+      position: relative;
+      width: 96px;
+      height: 96px;
+      margin: 0 auto 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .maint-icon-ring {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 1px solid color-mix(in srgb, var(--amber) 25%, transparent);
+      animation: ringPulse 2.4s ease-in-out infinite;
+    }
+
+    .maint-icon-glow {
+      position: absolute;
+      inset: -20px;
+      border-radius: 50%;
+      background: radial-gradient(circle, color-mix(in srgb, var(--amber) 22%, transparent), transparent 70%);
+      filter: blur(8px);
+    }
+
+    @keyframes ringPulse {
+      0%, 100% { transform: scale(1); opacity: 0.7; }
+      50% { transform: scale(1.15); opacity: 0.2; }
     }
 
     .maint-gear {
-      width: 64px;
-      height: 64px;
-      margin: 0 auto 2rem;
+      position: relative;
+      width: 42px;
+      height: 42px;
       color: var(--amber);
       animation: spin 8s linear infinite;
+      filter: drop-shadow(0 0 12px color-mix(in srgb, var(--amber) 60%, transparent));
     }
 
     @keyframes spin { to { transform: rotate(360deg); } }
 
     .maint-badge {
-      display: inline-block;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5em;
       font-family: var(--mono);
-      font-size: 0.75rem;
+      font-size: 0.72rem;
+      font-weight: 600;
       letter-spacing: 0.15em;
       color: var(--amber);
-      border: 1px solid color-mix(in srgb, var(--amber) 30%, transparent);
-      padding: 0.3em 0.9em;
+      border: 1px solid color-mix(in srgb, var(--amber) 35%, transparent);
+      background: color-mix(in srgb, var(--amber) 8%, transparent);
+      padding: 0.4em 1em;
       border-radius: 999px;
-      margin-bottom: 2rem;
+      margin-bottom: 1.75rem;
     }
 
+    .maint-badge .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--amber);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    .maint-service {
+      display: none;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      color: var(--cyan);
+      background: color-mix(in srgb, var(--cyan) 10%, transparent);
+      border: 1px solid color-mix(in srgb, var(--cyan) 25%, transparent);
+      padding: 0.4em 1em;
+      border-radius: 999px;
+      margin: 0 auto 1.5rem;
+      width: fit-content;
+    }
+    .maint-service.show { display: block; }
+
     .maint-title {
-      font-size: clamp(2rem, 6vw, 2.8rem);
-      font-weight: 700;
-      margin-bottom: 1rem;
-      line-height: 1.2;
+      font-size: clamp(2.1rem, 6vw, 3rem);
+      font-weight: 800;
+      margin-bottom: 1.1rem;
+      line-height: 1.15;
+      letter-spacing: -0.01em;
     }
 
     .maint-title .mono {
       font-family: var(--mono);
-      font-size: 0.45em;
+      font-size: 0.4em;
       display: block;
       color: var(--text-dim);
-      font-weight: 400;
-      margin-bottom: 0.4em;
-      letter-spacing: 0.08em;
+      font-weight: 500;
+      margin-bottom: 0.6em;
+      letter-spacing: 0.12em;
+    }
+
+    .maint-title .gradient {
+      background: linear-gradient(120deg, var(--text) 20%, var(--cyan) 55%, var(--amber) 90%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
     }
 
     .maint-desc {
       color: var(--text-mid);
       font-size: 1.05rem;
       line-height: 1.7;
-      margin-bottom: 2.5rem;
+      margin: 0 auto 2.5rem;
+      max-width: 440px;
     }
 
-    .countdown-box {
-      display: inline-flex;
-      align-items: baseline;
-      gap: 0.5rem;
-      background: var(--bg);
-      border: 1px solid var(--line-mid);
-      border-radius: 12px;
-      padding: 0.8rem 1.5rem;
+    .countdown {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
       margin-bottom: 2rem;
     }
 
-    .countdown-label {
-      font-family: var(--mono);
-      font-size: 0.7rem;
-      color: var(--text-dim);
-      letter-spacing: 0.1em;
+    .countdown-unit {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.4rem;
+      background: linear-gradient(180deg, var(--bg-3), var(--bg));
+      border: 1px solid var(--line-mid);
+      border-radius: 12px;
+      padding: 0.85rem 1rem;
+      min-width: 72px;
     }
 
-    .countdown-value {
+    .countdown-unit .val {
       font-family: var(--mono);
-      font-size: 1.1rem;
+      font-size: 1.6rem;
+      font-weight: 700;
       color: var(--amber);
-      font-weight: 600;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .countdown-unit .lbl {
+      font-family: var(--mono);
+      font-size: 0.62rem;
+      color: var(--text-dim);
+      letter-spacing: 0.12em;
+    }
+
+    .countdown-sep {
+      font-family: var(--mono);
+      font-size: 1.4rem;
+      color: var(--line-mid);
+      margin-top: -1.2rem;
+    }
+
+    .countdown-caption {
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      letter-spacing: 0.14em;
+      color: var(--text-dim);
+      margin-top: -1.4rem;
+      margin-bottom: 2rem;
     }
 
     .maint-footer {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6em;
       font-family: var(--mono);
       font-size: 0.75rem;
       color: var(--text-dim);
       border-top: 1px solid rgba(100, 116, 139, 0.15);
       padding-top: 1.5rem;
+      flex-wrap: wrap;
     }
 
     .maint-footer .pulse {
@@ -150,9 +293,7 @@
       height: 6px;
       border-radius: 50%;
       background: var(--amber);
-      margin-right: 0.5em;
       animation: pulse 2s ease-in-out infinite;
-      vertical-align: middle;
     }
 
     @keyframes pulse {
@@ -160,26 +301,14 @@
       50% { opacity: 0.5; box-shadow: 0 0 0 6px transparent; }
     }
 
-    .maint-logo {
-      font-family: var(--mono);
-      font-size: 0.8rem;
-      color: var(--text-dim);
-      margin-bottom: 3rem;
+    @media (max-width: 560px) {
+      .maint-container { padding: 2.5rem 1.5rem; border-radius: 18px; }
+      .maint-icon-wrap { width: 76px; height: 76px; margin-bottom: 1.5rem; }
+      .maint-gear { width: 34px; height: 34px; }
+      .countdown-unit { min-width: 58px; padding: 0.65rem 0.7rem; }
+      .countdown-unit .val { font-size: 1.25rem; }
+      .countdown { gap: 0.4rem; }
     }
-
-    @media (max-width: 520px) {
-      .maint-container { padding: 2rem 1.25rem; }
-      .maint-gear { width: 48px; height: 48px; margin-bottom: 1.5rem; }
-    }
-
-    .maint-service {
-      display: none;
-      font-family: var(--mono);
-      font-size: 0.8rem;
-      color: var(--cyan);
-      margin-bottom: 1.25rem;
-    }
-    .maint-service.show { display: block; }
   </style>
 </head>
 <body>
@@ -188,32 +317,49 @@
   <div class="maint-container">
     <div class="maint-logo">[bf].xyz</div>
 
-    <svg class="maint-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M12 15a3 3 0 100-6 3 3 0 000 6z" />
-      <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9c.26.604.852.997 1.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
-    </svg>
+    <div class="maint-icon-wrap">
+      <div class="maint-icon-glow"></div>
+      <div class="maint-icon-ring"></div>
+      <svg class="maint-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 15a3 3 0 100-6 3 3 0 000 6z" />
+        <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9c.26.604.852.997 1.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
+      </svg>
+    </div>
 
-    <div class="maint-badge">UNDER MAINTENANCE</div>
+    <div class="maint-badge"><span class="dot"></span>UNDER MAINTENANCE</div>
 
     <div class="maint-service" id="maintService"></div>
 
     <h1 class="maint-title">
       <span class="mono">// SYSTEM MAINTENANCE</span>
-      Back Soon
+      <span class="gradient">Back Soon</span>
     </h1>
 
     <p class="maint-desc" id="maintDesc">
       Hey — we're doing some maintenance on the homelab. Everything will be back up in a few hours.
     </p>
 
-    <div class="countdown-box" id="countdownBox">
-      <span class="countdown-label">ESTIMATED RESTORE</span>
-      <span class="countdown-value" id="countdownValue">--:--:--</span>
+    <div class="countdown" id="countdownBox">
+      <div class="countdown-unit">
+        <span class="val" id="cdHours">--</span>
+        <span class="lbl">HRS</span>
+      </div>
+      <span class="countdown-sep">:</span>
+      <div class="countdown-unit">
+        <span class="val" id="cdMins">--</span>
+        <span class="lbl">MIN</span>
+      </div>
+      <span class="countdown-sep">:</span>
+      <div class="countdown-unit">
+        <span class="val" id="cdSecs">--</span>
+        <span class="lbl">SEC</span>
+      </div>
     </div>
+    <div class="countdown-caption">ESTIMATED RESTORE</div>
 
     <div class="maint-footer">
       <span class="pulse"></span>
-      Maintenance in progress — last updated: <span id="updated"></span>
+      <span>Maintenance in progress — last updated: <span id="updated"></span></span>
     </div>
   </div>
 
@@ -246,6 +392,7 @@
               startCountdown(data.timeRemaining);
             } else {
               document.getElementById('countdownBox').style.display = 'none';
+              document.querySelector('.countdown-caption').style.display = 'none';
             }
           }
         })
@@ -258,7 +405,8 @@
       var c = document.getElementById('bgCanvas');
       var ctx = c.getContext('2d');
       var w, h, particles = [];
-      var N = 55;
+      var N = 70;
+      var COLORS = ['252,211,77', '103,232,249'];
 
       function resize() {
         w = c.width = window.innerWidth;
@@ -271,9 +419,10 @@
         particles.push({
           x: Math.random() * w,
           y: Math.random() * h,
-          vx: (Math.random() - 0.5) * 0.3,
-          vy: (Math.random() - 0.5) * 0.3,
-          r: Math.random() * 1.5 + 0.5
+          vx: (Math.random() - 0.5) * 0.25,
+          vy: (Math.random() - 0.5) * 0.25,
+          r: Math.random() * 1.6 + 0.6,
+          c: COLORS[i % 2]
         });
       }
 
@@ -289,7 +438,7 @@
           if (p.y > h) p.y = 0;
           ctx.beginPath();
           ctx.arc(p.x, p.y, p.r, 0, 6.2832);
-          ctx.fillStyle = 'rgba(252,211,77,0.25)';
+          ctx.fillStyle = 'rgba(' + p.c + ',0.35)';
           ctx.fill();
         }
         for (var i = 0; i < particles.length; i++) {
@@ -297,11 +446,11 @@
             var dx = particles[i].x - particles[j].x;
             var dy = particles[i].y - particles[j].y;
             var d = dx * dx + dy * dy;
-            if (d < 18000) {
+            if (d < 16000) {
               ctx.beginPath();
               ctx.moveTo(particles[i].x, particles[i].y);
               ctx.lineTo(particles[j].x, particles[j].y);
-              ctx.strokeStyle = 'rgba(252,211,77,' + (0.06 * (1 - d / 18000)) + ')';
+              ctx.strokeStyle = 'rgba(' + particles[i].c + ',' + (0.08 * (1 - d / 16000)) + ')';
               ctx.stroke();
             }
           }
@@ -317,14 +466,12 @@
         var hours = Math.floor(remaining / 3600000);
         var mins = Math.floor((remaining % 3600000) / 60000);
         var secs = Math.floor((remaining % 60000) / 1000);
-        var el = document.getElementById('countdownValue');
-        if (el) {
-          el.textContent = [
-            String(hours).padStart(2, '0'),
-            String(mins).padStart(2, '0'),
-            String(secs).padStart(2, '0')
-          ].join(':');
-        }
+        var h = document.getElementById('cdHours');
+        var m = document.getElementById('cdMins');
+        var s = document.getElementById('cdSecs');
+        if (h) h.textContent = String(hours).padStart(2, '0');
+        if (m) m.textContent = String(mins).padStart(2, '0');
+        if (s) s.textContent = String(secs).padStart(2, '0');
         if (remaining <= 0) {
           clearInterval(timer);
           fetch('/api/bf/maintenance/status')

@@ -139,10 +139,39 @@ const SERVICES = [
   const offlineBanner = document.getElementById('offlineBanner');
   const offlineMsg = document.getElementById('offlineMsg');
   const checkBtn = document.getElementById('checkBtn');
-  
+
+  // Maps a service's display name (SERVICES[].name) to its subdomain key
+  // (e.g. "Jellyfin" -> "jellyfin"), matching the keys the maintenance
+  // worker uses in state.affectedServices.
+  const NAME_TO_KEY = {};
+  SERVICES.forEach(function (s) {
+    NAME_TO_KEY[s.name] = new URL(s.url).hostname.split('.')[0];
+  });
+
+  // A service can be manually flagged under maintenance regardless of
+  // whether it actually still responds to health pings (it may be fully
+  // up — the point is visitors are being redirected away from it).
+  let maintainedKeys = new Set();
+
+  async function checkMaintenance() {
+    try {
+      const res = await fetch('/api/bf/maintenance/status');
+      const data = await res.json();
+      if (data.enabled && data.targetServices === 'all') {
+        maintainedKeys = new Set(Object.values(NAME_TO_KEY));
+      } else if (data.enabled && data.targetServices === 'partial') {
+        maintainedKeys = new Set(data.affectedServices || []);
+      } else {
+        maintainedKeys = new Set();
+      }
+    } catch (e) {
+      // Leave maintainedKeys as last known on failure.
+    }
+  }
+
   let isOnline = false;
   let lastStatus = 'checking';
-  
+
   function updateUI(online, status, pct, services) {
     isOnline = online;
     lastStatus = status;
@@ -176,14 +205,18 @@ const SERVICES = [
       const name = card.dataset.name;
       const svc = services ? services.find(function (s) { return s.name === name; }) : null;
       const up = svc ? svc.healthy : online;
+      const underMaintenance = maintainedKeys.has(NAME_TO_KEY[name]);
 
-      card.classList.toggle('offline', !up);
-      dot.classList.toggle('offline', !up);
-      statusEl.textContent = up ? 'active' : 'offline';
+      card.classList.toggle('maintenance', underMaintenance);
+      card.classList.toggle('offline', !underMaintenance && !up);
+      dot.classList.toggle('maintenance', underMaintenance);
+      dot.classList.toggle('offline', !underMaintenance && !up);
+      statusEl.textContent = underMaintenance ? 'maintenance' : (up ? 'active' : 'offline');
     });
   }
   
   async function checkHealth() {
+    await checkMaintenance();
     try {
       const controller = new AbortController();
       const timeout = setTimeout(function () { controller.abort(); }, 3000);
