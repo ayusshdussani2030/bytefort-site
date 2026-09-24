@@ -46,7 +46,7 @@
 
 <div class="maint-overlay" id="maintOverlay">
   <div class="maint-modal">
-    <h2>⚙️ Under Maintenance</h2>
+    <h2 id="maintTitle">⚙️ Under Maintenance</h2>
     <p id="maintMsg">We're doing some maintenance on the homelab. Everything will be back up in a few hours.</p>
     <div class="countdown" id="maintCountdown"></div>
     <button class="btn" onclick="document.getElementById('maintOverlay').classList.remove('active')">OK</button>
@@ -294,7 +294,15 @@
 <!-- Maintenance check -->
 <script>
 (function() {
+  var SERVICE_NAMES = {
+    auth: 'Authentik', jellyfin: 'Jellyfin', seerr: 'Jellyseerr',
+    netbird: 'Netbird', npm: 'Nginx Proxy Manager', ripper: 'Ripper',
+    speedtest: 'Speed Test', vault: 'Vaultwarden', homeassistant: 'Home Assistant'
+  };
+  var redirectedFrom = new URLSearchParams(location.search).get('service');
+
   var overlay = document.getElementById('maintOverlay');
+  var titleEl = document.getElementById('maintTitle');
   var msgEl = document.getElementById('maintMsg');
   var countdownEl = document.getElementById('maintCountdown');
   var checked = false;
@@ -307,6 +315,9 @@
       .then(function(r) { return r.json(); })
       .then(function(data) {
         if (data.enabled) {
+          if (redirectedFrom && SERVICE_NAMES[redirectedFrom]) {
+            titleEl.textContent = '⚙️ ' + SERVICE_NAMES[redirectedFrom] + ' is under maintenance';
+          }
           if (data.message) msgEl.textContent = data.message;
           overlay.classList.add('active');
 
