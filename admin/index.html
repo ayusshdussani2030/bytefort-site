@@ -376,12 +376,16 @@
   async function showDash() {
     $('#loginScreen').style.display = 'none';
     $('#dash').classList.add('active');
-    await refresh();
-    refreshInterval = setInterval(refresh, 10000);
+    await refresh(true);
+    // Periodic poll only refreshes read-only status (toggle, countdown, etc) —
+    // it must never repopulate the form fields below, or it silently wipes out
+    // whatever the admin is mid-way through editing (e.g. checking several
+    // service boxes takes longer than 10s) before they get a chance to save.
+    refreshInterval = setInterval(() => refresh(false), 10000);
   }
 
   // ── Fetch state ───────────────────────────────────
-  async function refresh() {
+  async function refresh(populateForm) {
     try {
       const res = await fetch(API + '/maintenance/status', {
         headers: { 'X-BF-Secret': secret }
@@ -393,14 +397,14 @@
       }
       const data = await res.json();
       currentState = data;
-      renderState(data);
+      renderState(data, populateForm);
     } catch (e) {
       console.warn('Failed to refresh:', e);
     }
   }
 
   // ── Render state ──────────────────────────────────
-  function renderState(data) {
+  function renderState(data, populateForm) {
     const toggle = $('#maintToggle');
     toggle.checked = data.enabled;
 
@@ -420,6 +424,12 @@
       clearInterval(countdownInterval);
     }
 
+    $('#redirectNotice').style.display = data.enabled ? 'block' : 'none';
+
+    // Only overwrite editable fields on an explicit (re)load, never on the
+    // periodic background poll — see the comment in showDash().
+    if (!populateForm) return;
+
     $('#messageInput').value = data.message || '';
     $('#durationInput').value = data.estimatedRestore
       ? Math.max(0.5, Math.round((new Date(data.estimatedRestore).getTime() - Date.now()) / 3600000 * 10) / 10)
@@ -430,8 +440,6 @@
 
     const partialCard = $('#partialCard');
     partialCard.style.display = data.targetServices === 'partial' ? 'block' : 'none';
-
-    $('#redirectNotice').style.display = data.enabled ? 'block' : 'none';
   }
 
   function renderSvcCheckboxes(data) {
@@ -521,7 +529,7 @@
       const data = await res.json();
       if (res.ok) {
         toast('Configuration saved');
-        await refresh();
+        await refresh(true);
       } else {
         toast(data.error === 'rate-limited' ? 'Too many requests, wait a moment' : 'Failed to save', false);
       }
@@ -555,7 +563,7 @@
       const data = await res.json();
       if (res.ok) {
         toast('Maintenance disabled');
-        await refresh();
+        await refresh(true);
       } else {
         toast(data.error || 'Failed', false);
       }
