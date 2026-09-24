@@ -236,12 +236,61 @@
   </div>
 </section>
 
+<!-- LIVE METRICS -->
+<section class="s-metrics" id="metrics">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-tag mono reveal-up">03</span>
+      <h2 class="section-title reveal-up">Live Metrics</h2>
+      <p class="section-sub reveal-up">Pushed straight from the server — no cloud in between.</p>
+    </div>
+    <div class="metrics-grid" id="metricsGrid" hidden>
+      <div class="metric-card reveal-up" id="metricCpuCard">
+        <div class="metric-top">
+          <span class="metric-label mono">CPU</span>
+          <span class="metric-value mono" id="metricCpu">—</span>
+        </div>
+        <div class="metric-bar"><div class="metric-bar-fill" id="metricCpuBar"></div></div>
+      </div>
+      <div class="metric-card reveal-up" id="metricMemCard">
+        <div class="metric-top">
+          <span class="metric-label mono">MEMORY</span>
+          <span class="metric-value mono" id="metricMem">—</span>
+        </div>
+        <div class="metric-bar"><div class="metric-bar-fill" id="metricMemBar"></div></div>
+      </div>
+      <div class="metric-card reveal-up" id="metricDiskCard">
+        <div class="metric-top">
+          <span class="metric-label mono">DISK</span>
+          <span class="metric-value mono" id="metricDisk">—</span>
+        </div>
+        <div class="metric-bar"><div class="metric-bar-fill" id="metricDiskBar"></div></div>
+      </div>
+      <div class="metric-card reveal-up">
+        <div class="metric-top">
+          <span class="metric-label mono">LOAD AVG</span>
+          <span class="metric-value mono" id="metricLoad">—</span>
+        </div>
+        <p class="metric-sub">1 / 5 / 15 min</p>
+      </div>
+      <div class="metric-card reveal-up">
+        <div class="metric-top">
+          <span class="metric-label mono">UPTIME</span>
+          <span class="metric-value mono" id="metricUptime">—</span>
+        </div>
+        <p class="metric-sub">Updated <span id="metricUpdated">—</span></p>
+      </div>
+    </div>
+    <p class="metric-empty" id="metricEmpty">No metrics pushed yet — see maintenance-worker/METRICS_SETUP.md.</p>
+  </div>
+</section>
+
 <!-- ABOUT / ABOUT -->
 <section class="s-about" id="about">
   <div class="container">
     <div class="about-content">
       <div class="section-header about-header">
-        <span class="section-tag mono reveal-up">03</span>
+        <span class="section-tag mono reveal-up">04</span>
         <h2 class="section-title reveal-up">About This Setup</h2>
       </div>
       <div class="about-grid">

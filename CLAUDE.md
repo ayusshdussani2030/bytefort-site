@@ -141,3 +141,7 @@ Admin API routes (all under `/api/bf`, `X-BF-Secret` header required except `log
 - `GET /maintenance/status` — public, polled by `index.html` and `maintenance/index.html`
 
 Partial maintenance lets specific services through via `state.targetServices === 'partial'`: the worker matches the request's **subdomain** (`SUBDOMAIN_SERVICE_MAP` in `worker.js`, e.g. `jellyfin.bytefort.xyz` → `jellyfin`) against `state.affectedServices` — not the URL path, since services live on subdomains. Full maintenance blocks everything except `/admin`.
+
+## Live metrics
+
+`#metrics` on the dashboard shows CPU/memory/disk/load/uptime, sourced from a small script (`maintenance-worker/push-metrics.sh`) run via cron **on the home server itself** — see `maintenance-worker/METRICS_SETUP.md`. It reads raw OS stats (`/proc`, `free`, `df`), not Grafana or Prometheus, and pushes them to `POST /api/bf/metrics`, authenticated with its own `METRICS_SECRET` (separate from `ADMIN_PASSWORD` — the script only needs push rights). `GET /api/bf/metrics` is public; the dashboard polls it every 60s and shows "No metrics pushed yet" until the first push lands. Grafana/Prometheus are LAN-only and were never made reachable from Cloudflare — this bridges data out without exposing either.
