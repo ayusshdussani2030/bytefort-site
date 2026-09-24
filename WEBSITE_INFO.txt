@@ -161,6 +161,29 @@ KV Schema (status key):
     }
   }
 
+MAINTENANCE GATE WORKER + ADMIN PANEL
+--------------------------------------
+Separate from the health check worker above — this one fronts bytefort.xyz itself.
+
+Worker name: bytefort-site
+Entry point: maintenance-worker/worker.js
+Binding: BYTEFORT_MAINT (KV namespace)
+Admin password: set via `wrangler secret put ADMIN_PASSWORD` (never hardcoded)
+
+Pages served by the worker:
+  /admin        — admin/index.html (password-gated, X-BF-Protected, no-store)
+  (maintenance) — maintenance/index.html, served in place of any page while
+                  maintenance mode is enabled
+
+Admin API (under /api/bf, requires X-BF-Secret header except login/status):
+  POST /admin/login              — validate password, returns token
+  POST /maintenance/toggle       — enable/disable maintenance mode
+  POST /maintenance/message      — update maintenance message/ETA
+  POST /maintenance/services     — set partial-maintenance target services
+  GET  /maintenance/status       — public; polled by index.html + maintenance page
+
+Rate limit: 10 requests/min per route (in-memory, per Worker isolate).
+
 INTERACTIVITY (script.js)
 -------------------------
 1. Boot intro overlay — fills progress bar, cycles status text

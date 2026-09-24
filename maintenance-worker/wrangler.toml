@@ -1,0 +1,11 @@
+name = "bytefort-site"
+compatibility_date = "2026-01-01"
+
+main = "worker.js"
+
+kv_namespaces = [
+  { binding = "BYTEFORT_MAINT", id = "YOUR_KV_NAMESPACE_ID", preview_id = "YOUR_KV_NAMESPACE_ID" }
+]
+
+# Set the admin password as a secret before deploying:
+#   npx wrangler secret put ADMIN_PASSWORD --config maintenance-worker/wrangler.toml

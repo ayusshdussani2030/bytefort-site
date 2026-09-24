@@ -122,3 +122,22 @@ Served via **Cloudflare Tunnel** (zero open ports) behind **Cloudflare CDN**. Ch
 - `connect-src`: self + `https://api.bytefort.xyz` + `https://cloudflareinsights.com`
 
 If a new external resource is added (font, script, fetch target), update the CSP meta tag or it will be blocked silently in the browser console.
+
+## Maintenance mode + admin panel
+
+A second, separate Cloudflare Worker (`maintenance-worker/`) sits in front of `bytefort.xyz` and is distinct from the `worker/` health-check worker that serves `api.bytefort.xyz`.
+
+| Path | Role |
+|------|------|
+| `maintenance-worker/worker.js` | Maintenance gate + admin API. Binds KV namespace `BYTEFORT_MAINT`, deployed as Worker `bytefort-site`. |
+| `maintenance-worker/wrangler.toml` | Worker config. Admin password is a secret (`wrangler secret put ADMIN_PASSWORD`), never hardcoded. |
+| `maintenance-worker/setup.js` | One-time helper to create the `BYTEFORT_MAINT` KV namespace. |
+| `admin/index.html` | Password-gated admin panel, served at `/admin` by the worker (fetches `admin/index.html` internally). |
+| `maintenance/index.html` | Maintenance splash page, served whenever maintenance mode is enabled (fetches `maintenance/index.html` internally). |
+
+Admin API routes (all under `/api/bf`, `X-BF-Secret` header required except `login`/`status`):
+- `POST /admin/login` — validates password, returns it as the session token
+- `POST /maintenance/toggle`, `/maintenance/message`, `/maintenance/services` — mutate maintenance state
+- `GET /maintenance/status` — public, polled by `index.html` and `maintenance/index.html`
+
+Partial maintenance can allow specific services through via `state.targetServices === 'partial'` and a path→service bypass map in the worker — full maintenance blocks everything except `/admin`.
