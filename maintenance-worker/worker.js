@@ -56,142 +56,158 @@ async function putState(kv, state) {
   await kv.put('maintenance:state', JSON.stringify(state));
 }
 
+// Maps a service subdomain (e.g. "jellyfin" from jellyfin.bytefort.xyz) to its
+// canonical key in state.affectedServices. The root domain has no subdomain.
+const SUBDOMAIN_SERVICE_MAP = {
+  auth: 'auth',
+  jellyfin: 'jellyfin',
+  seerr: 'seerr',
+  netbird: 'netbird',
+  npm: 'npm',
+  ripper: 'ripper',
+  speedtest: 'speedtest',
+  vault: 'vault',
+  homeassistant: 'homeassistant'
+};
+
+const ROOT_HOSTS = new Set(['bytefort.xyz', 'www.bytefort.xyz']);
+
+function subdomainOf(hostname) {
+  const host = hostname.toLowerCase();
+  if (ROOT_HOSTS.has(host)) return '';
+  return host.endsWith('.bytefort.xyz') ? host.slice(0, -'.bytefort.xyz'.length) : host;
+}
+
 // ── Request handler ─────────────────────────────────────
 async function handleRequest(req, env) {
   const url = new URL(req.url);
   const kv = env.BYTEFORT_MAINT;
+  const isRootHost = ROOT_HOSTS.has(url.hostname.toLowerCase());
 
-  // ── Admin auth endpoint ─────────────────────────────
-  if (url.pathname === '/api/bf/admin/login' && req.method === 'POST') {
-    const rateErr = checkRateLimit('admin-login');
-    if (rateErr) return rateErr;
-    try {
-      const body = await req.json();
-      if (env.ADMIN_PASSWORD && body.password === env.ADMIN_PASSWORD) {
-        return json({ success: true, token: env.ADMIN_PASSWORD });
+  // Admin panel and admin API only ever apply to the root domain — this worker
+  // also fronts service subdomains (e.g. vault.bytefort.xyz), and some of those
+  // services have their own native /admin route (Vaultwarden) that must not be
+  // shadowed.
+  if (isRootHost) {
+    // ── Admin auth endpoint ─────────────────────────────
+    if (url.pathname === '/api/bf/admin/login' && req.method === 'POST') {
+      const rateErr = checkRateLimit('admin-login');
+      if (rateErr) return rateErr;
+      try {
+        const body = await req.json();
+        if (env.ADMIN_PASSWORD && body.password === env.ADMIN_PASSWORD) {
+          return json({ success: true, token: env.ADMIN_PASSWORD });
+        }
+        return json({ error: 'invalid-password' }, 401);
+      } catch (e) {
+        return json({ error: 'bad-request' }, 400);
       }
-      return json({ error: 'invalid-password' }, 401);
-    } catch (e) {
-      return json({ error: 'bad-request' }, 400);
-    }
-  }
-
-  // ── API routes (require auth) ───────────────────────
-  const adminPaths = [
-    '/api/bf/maintenance/toggle',
-    '/api/bf/maintenance/message',
-    '/api/bf/maintenance/services'
-  ];
-
-  const isAdminRoute = adminPaths.some(p => url.pathname.startsWith(p));
-
-  if (isAdminRoute) {
-    const authErr = checkAdminAuth(req, env);
-    if (authErr) return authErr;
-    const rateErr = checkRateLimit('admin-api');
-    if (rateErr) return rateErr;
-
-    const body = await req.json().catch(() => ({}));
-    const state = await getState(kv);
-    const now = new Date().toISOString();
-
-    if (url.pathname === '/api/bf/maintenance/toggle') {
-      if (body.enabled === undefined) return json({ error: 'enabled-required' }, 400);
-      state.enabled = body.enabled;
-      state.activatedAt = now;
-      state.activatedBy = body.activatedBy || 'admin';
-      if (!body.enabled) {
-        state.estimatedRestore = null;
-      } else if (!state.estimatedRestore || new Date(state.estimatedRestore) < new Date()) {
-        const hours = body.durationHours || 2;
-        state.estimatedRestore = new Date(Date.now() + hours * 3600000).toISOString();
-      }
-      if (body.message !== undefined) state.message = body.message;
-      if (body.targetServices) {
-        state.targetServices = body.targetServices;
-        state.affectedServices = body.affectedServices || [];
-      }
-      await putState(kv, state);
-      return json({ success: true, state });
     }
 
-    if (url.pathname === '/api/bf/maintenance/message') {
-      if (body.message !== undefined) state.message = body.message;
-      if (body.durationHours && body.durationHours > 0) {
-        state.estimatedRestore = new Date(Date.now() + body.durationHours * 3600000).toISOString();
+    // ── API routes (require auth) ───────────────────────
+    const adminPaths = [
+      '/api/bf/maintenance/toggle',
+      '/api/bf/maintenance/message',
+      '/api/bf/maintenance/services'
+    ];
+
+    const isAdminRoute = adminPaths.some(p => url.pathname.startsWith(p));
+
+    if (isAdminRoute) {
+      const authErr = checkAdminAuth(req, env);
+      if (authErr) return authErr;
+      const rateErr = checkRateLimit('admin-api');
+      if (rateErr) return rateErr;
+
+      const body = await req.json().catch(() => ({}));
+      const state = await getState(kv);
+      const now = new Date().toISOString();
+
+      if (url.pathname === '/api/bf/maintenance/toggle') {
+        if (body.enabled === undefined) return json({ error: 'enabled-required' }, 400);
+        state.enabled = body.enabled;
+        state.activatedAt = now;
+        state.activatedBy = body.activatedBy || 'admin';
+        if (!body.enabled) {
+          state.estimatedRestore = null;
+        } else if (!state.estimatedRestore || new Date(state.estimatedRestore) < new Date()) {
+          const hours = body.durationHours || 2;
+          state.estimatedRestore = new Date(Date.now() + hours * 3600000).toISOString();
+        }
+        if (body.message !== undefined) state.message = body.message;
+        if (body.targetServices) {
+          state.targetServices = body.targetServices;
+          state.affectedServices = body.affectedServices || [];
+        }
+        await putState(kv, state);
+        return json({ success: true, state });
       }
-      await putState(kv, state);
-      return json({ success: true });
+
+      if (url.pathname === '/api/bf/maintenance/message') {
+        if (body.message !== undefined) state.message = body.message;
+        if (body.durationHours && body.durationHours > 0) {
+          state.estimatedRestore = new Date(Date.now() + body.durationHours * 3600000).toISOString();
+        }
+        await putState(kv, state);
+        return json({ success: true });
+      }
+
+      if (url.pathname === '/api/bf/maintenance/services') {
+        if (body.target) {
+          state.targetServices = body.target;
+          if (body.services) state.affectedServices = body.services;
+        }
+        await putState(kv, state);
+        return json({ success: true });
+      }
     }
 
-    if (url.pathname === '/api/bf/maintenance/services') {
-      if (body.target) {
-        state.targetServices = body.target;
-        if (body.services) state.affectedServices = body.services;
-      }
-      await putState(kv, state);
-      return json({ success: true });
+    // ── Public status endpoint (no auth needed) ─────────
+    if (url.pathname === '/api/bf/maintenance/status') {
+      const state = await getState(kv);
+      return json({
+        enabled: state.enabled,
+        message: state.message,
+        estimatedRestore: state.estimatedRestore,
+        targetServices: state.targetServices,
+        affectedServices: state.affectedServices,
+        activatedAt: state.activatedAt,
+        timeRemaining: state.estimatedRestore
+          ? Math.max(0, new Date(state.estimatedRestore).getTime() - Date.now())
+          : null
+      });
     }
-  }
 
-  // ── Public status endpoint (no auth needed) ─────────
-  if (url.pathname === '/api/bf/maintenance/status') {
-    const state = await getState(kv);
-    return json({
-      enabled: state.enabled,
-      message: state.message,
-      estimatedRestore: state.estimatedRestore,
-      targetServices: state.targetServices,
-      affectedServices: state.affectedServices,
-      activatedAt: state.activatedAt,
-      timeRemaining: state.estimatedRestore
-        ? Math.max(0, new Date(state.estimatedRestore).getTime() - Date.now())
-        : null
-    });
-  }
-
-  // ── Serve admin panel ───────────────────────────────
-  if (url.pathname === '/admin' || url.pathname === '/admin/') {
-    try {
-      const res = await fetch(new Request(new URL('/admin/index.html', req.url), {
-        headers: { 'Accept': 'text/html' }
-      }));
-      if (res.ok) {
-        const modified = new Response(res.body, res);
-        modified.headers.set('Cache-Control', 'no-store');
-        modified.headers.set('X-BF-Protected', 'true');
-        return modified;
-      }
-    } catch (e) {}
+    // ── Serve admin panel ───────────────────────────────
+    if (url.pathname === '/admin' || url.pathname === '/admin/') {
+      try {
+        const res = await fetch(new Request(new URL('/admin/index.html', req.url), {
+          headers: { 'Accept': 'text/html' }
+        }));
+        if (res.ok) {
+          const modified = new Response(res.body, res);
+          modified.headers.set('Cache-Control', 'no-store');
+          modified.headers.set('X-BF-Protected', 'true');
+          return modified;
+        }
+      } catch (e) {}
+    }
   }
 
   // ── Maintenance gate ────────────────────────────────
   const state = await getState(kv);
   if (state.enabled && !req.headers.get('X-BF-Static')) {
-    // For partial maintenance, let specific services through
+    // For partial maintenance, let specific services through. Services live on
+    // their own subdomains (jellyfin.bytefort.xyz), not on paths of the root
+    // domain, so match against the hostname's subdomain.
     if (state.targetServices === 'partial' && state.affectedServices.length > 0) {
-      const path = url.pathname.replace(/^\/+/, '').toLowerCase();
-      const bypassMap = {
-        'auth': 'auth', 'authentik': 'auth',
-        'jellyfin': 'jellyfin',
-        'seerr': 'seerr', 'jellyseerr': 'seerr',
-        'netbird': 'netbird',
-        'npm': 'npm',
-        'ripper': 'ripper',
-        'speedtest': 'speedtest', 'speed': 'speedtest',
-        'vault': 'vault', 'vaultwarden': 'vault',
-        'homeassistant': 'homeassistant'
-      };
-      for (const [key, svcKey] of Object.entries(bypassMap)) {
-        if (path === key || path.startsWith(key + '/')) {
-          if (!state.affectedServices.includes(svcKey)) {
-            // Forward with flag to prevent recursive loop through the worker
-            const forwarded = new Request(req, {
-              headers: { ...Object.fromEntries(req.headers.entries()), 'X-BF-Static': '1' }
-            });
-            return fetch(forwarded);
-          }
-        }
+      const svcKey = SUBDOMAIN_SERVICE_MAP[subdomainOf(url.hostname)];
+      if (svcKey && !state.affectedServices.includes(svcKey)) {
+        // Forward with flag to prevent recursive loop through the worker
+        const forwarded = new Request(req, {
+          headers: { ...Object.fromEntries(req.headers.entries()), 'X-BF-Static': '1' }
+        });
+        return fetch(forwarded);
       }
     }
 

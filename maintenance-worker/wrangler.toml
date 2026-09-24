@@ -7,5 +7,15 @@ kv_namespaces = [
   { binding = "BYTEFORT_MAINT", id = "YOUR_KV_NAMESPACE_ID", preview_id = "YOUR_KV_NAMESPACE_ID" }
 ]
 
+# Fronts the main dashboard and every service subdomain, so the maintenance
+# gate and partial-maintenance bypass can act on either. The existing
+# api.bytefort.xyz custom domain (bytefort-metrics worker) takes precedence
+# over this wildcard for that one hostname.
+routes = [
+  { pattern = "bytefort.xyz/*", zone_name = "bytefort.xyz" },
+  { pattern = "www.bytefort.xyz/*", zone_name = "bytefort.xyz" },
+  { pattern = "*.bytefort.xyz/*", zone_name = "bytefort.xyz" }
+]
+
 # Set the admin password as a secret before deploying:
 #   npx wrangler secret put ADMIN_PASSWORD --config maintenance-worker/wrangler.toml

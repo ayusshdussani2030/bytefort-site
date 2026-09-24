@@ -135,9 +135,9 @@ A second, separate Cloudflare Worker (`maintenance-worker/`) sits in front of `b
 | `admin/index.html` | Password-gated admin panel, served at `/admin` by the worker (fetches `admin/index.html` internally). |
 | `maintenance/index.html` | Maintenance splash page, served whenever maintenance mode is enabled (fetches `maintenance/index.html` internally). |
 
-Admin API routes (all under `/api/bf`, `X-BF-Secret` header required except `login`/`status`):
+Admin API routes (all under `/api/bf`, `X-BF-Secret` header required except `login`/`status`). These, and `/admin`, only apply on the root host (`bytefort.xyz`/`www.bytefort.xyz`) — the worker also routes `*.bytefort.xyz/*` for the maintenance gate, and some services (Vaultwarden) have their own native `/admin` path that must not be shadowed:
 - `POST /admin/login` — validates password, returns it as the session token
 - `POST /maintenance/toggle`, `/maintenance/message`, `/maintenance/services` — mutate maintenance state
 - `GET /maintenance/status` — public, polled by `index.html` and `maintenance/index.html`
 
-Partial maintenance can allow specific services through via `state.targetServices === 'partial'` and a path→service bypass map in the worker — full maintenance blocks everything except `/admin`.
+Partial maintenance lets specific services through via `state.targetServices === 'partial'`: the worker matches the request's **subdomain** (`SUBDOMAIN_SERVICE_MAP` in `worker.js`, e.g. `jellyfin.bytefort.xyz` → `jellyfin`) against `state.affectedServices` — not the URL path, since services live on subdomains. Full maintenance blocks everything except `/admin`.
