@@ -1,0 +1,9 @@
+.git
+.gitignore
+.wrangler
+worker
+maintenance-worker
+README.md
+CLAUDE.md
+WEBSITE_INFO.txt
+.assetsignore
