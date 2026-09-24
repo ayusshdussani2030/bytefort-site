@@ -4,7 +4,7 @@ compatibility_date = "2026-01-01"
 main = "worker.js"
 
 kv_namespaces = [
-  { binding = "BYTEFORT_MAINT", id = "YOUR_KV_NAMESPACE_ID", preview_id = "YOUR_KV_NAMESPACE_ID" }
+  { binding = "BYTEFORT_MAINT", id = "ab37741543184d84b442d6cb9abf37dd" }
 ]
 
 # Fronts the main dashboard and every service subdomain, so the maintenance
