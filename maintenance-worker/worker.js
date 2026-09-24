@@ -198,55 +198,53 @@ async function handleRequest(req, env) {
         }
       } catch (e) {}
     }
-  }
 
-  // ── Maintenance gate ────────────────────────────────
-  const state = await getState(kv);
-  if (state.enabled && !req.headers.get('X-BF-Static')) {
-    // For partial maintenance, let specific services through. Services live on
-    // their own subdomains (jellyfin.bytefort.xyz), not on paths of the root
-    // domain, so match against the hostname's subdomain.
-    if (state.targetServices === 'partial' && state.affectedServices.length > 0) {
-      const svcKey = SUBDOMAIN_SERVICE_MAP[subdomainOf(url.hostname)];
-      if (svcKey && !state.affectedServices.includes(svcKey)) {
-        // Forward with flag to prevent recursive loop through the worker
-        const forwarded = new Request(req, {
-          headers: { ...Object.fromEntries(req.headers.entries()), 'X-BF-Static': '1' }
-        });
-        return fetch(forwarded);
-      }
+    // ── Full maintenance takes over the whole dashboard ──
+    // Partial maintenance (specific services only) leaves the dashboard live —
+    // index.html's own status poll shows a lighter in-page notice instead.
+    const state = await getState(kv);
+    if (state.enabled && state.targetServices !== 'partial') {
+      try {
+        const res = await fetchAsset(env, req, '/maintenance/index.html');
+        if (res.ok) {
+          const modified = new Response(res.body, res);
+          modified.headers.set('Cache-Control', 'public, max-age=60');
+          return modified;
+        }
+      } catch (e) {}
+
+      // Fallback
+      return new Response(
+        '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
+        '<title>[bf].xyz — Maintenance</title>' +
+        '<style>*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}body{font-family:system-ui,sans-serif;background:#05070b;color:#e2e8f0;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:2rem}' +
+        '.container{text-align:center;max-width:500px}.badge{display:inline-block;font-family:monospace;font-size:.75rem;letter-spacing:.15em;color:#fcd34d;border:1px solid rgba(252,211,77,.3);padding:.3em .9em;border-radius:999px;margin-bottom:2rem}.title{font-size:2.5rem;font-weight:700;margin-bottom:1rem;line-height:1.2}.desc{color:#94a3b8;line-height:1.7;margin-bottom:2rem}.meta{font-family:monospace;font-size:.75rem;color:#64748b;border-top:1px solid rgba(100,116,139,.15);padding-top:1.5rem}</style></head>' +
+        '<body><div class="container"><div class="badge">UNDER MAINTENANCE</div><h1 class="title">' +
+        (state.message || 'Under Maintenance') + '</h1><div class="meta">Maintenance in progress</div></div></body></html>',
+        { status: 200, headers: { 'Content-Type': 'text/html' } }
+      );
     }
 
-    // Serve maintenance page
-    try {
-      const res = await fetchAsset(env, req, '/maintenance/index.html');
-      if (res.ok) {
-        const modified = new Response(res.body, res);
-        modified.headers.set('Cache-Control', 'public, max-age=60');
-        return modified;
-      }
-    } catch (e) {}
-
-    // Fallback
-    return new Response(
-      '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
-      '<title>[bf].xyz — Maintenance</title>' +
-      '<style>*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}body{font-family:system-ui,sans-serif;background:#05070b;color:#e2e8f0;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:2rem}' +
-      '.container{text-align:center;max-width:500px}.badge{display:inline-block;font-family:monospace;font-size:.75rem;letter-spacing:.15em;color:#fcd34d;border:1px solid rgba(252,211,77,.3);padding:.3em .9em;border-radius:999px;margin-bottom:2rem}.title{font-size:2.5rem;font-weight:700;margin-bottom:1rem;line-height:1.2}.desc{color:#94a3b8;line-height:1.7;margin-bottom:2rem}.meta{font-family:monospace;font-size:.75rem;color:#64748b;border-top:1px solid rgba(100,116,139,.15);padding-top:1.5rem}</style></head>' +
-      '<body><div class="container"><div class="badge">UNDER MAINTENANCE</div><h1 class="title">' +
-      (state.message || 'Under Maintenance') + '</h1><div class="meta">Maintenance in progress</div></div></body></html>',
-      { status: 200, headers: { 'Content-Type': 'text/html' } }
-    );
+    // Normal dashboard — served entirely from Cloudflare's edge via the
+    // ASSETS binding (the root domain has no network origin).
+    return env.ASSETS.fetch(req);
   }
 
-  // ── Serve the static site ────────────────────────────
-  // Only the root host reaches this worker at all (see wrangler.toml routes).
-  // There is no network origin behind it — the dashboard is served entirely
-  // from Cloudflare's edge via the ASSETS binding.
-  if (isRootHost) return env.ASSETS.fetch(req);
+  // ── Service subdomains (jellyfin.bytefort.xyz, vault.bytefort.xyz, …) ──
+  // These have a real network origin (the wildcard A record), so normally we
+  // just proxy through. During maintenance that targets this service — or
+  // maintenance targeting "all" — redirect to the dashboard instead of
+  // letting visitors hit a dead/unreachable origin.
+  const svcKey = SUBDOMAIN_SERVICE_MAP[subdomainOf(url.hostname)];
+  if (svcKey) {
+    const state = await getState(kv);
+    const gated = state.enabled &&
+      (state.targetServices !== 'partial' || state.affectedServices.includes(svcKey));
+    if (gated) {
+      return Response.redirect(`https://bytefort.xyz/?service=${svcKey}`, 302);
+    }
+  }
 
-  // Any other host reaching this worker would have a real network origin
-  // (e.g. a service subdomain) — kept as a safety net, not currently reachable.
   return fetch(req);
 }
 
