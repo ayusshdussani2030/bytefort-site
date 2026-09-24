@@ -10,8 +10,48 @@
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <link rel="stylesheet" href="styles.css" />
+  <style>
+    .maint-overlay {
+      position: fixed; inset: 0; z-index: 9999;
+      background: rgba(3,5,8,0.85);
+      backdrop-filter: blur(12px);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none;
+      transition: opacity .35s var(--ease);
+    }
+    .maint-overlay.active { opacity: 1; pointer-events: all; }
+    .maint-modal {
+      background: var(--bg-2); border: 1px solid var(--line-mid);
+      border-radius: 16px; padding: 2.5rem; max-width: 480px; width: 90%;
+      text-align: center;
+    }
+    .maint-modal h2 {
+      font-size: 1.5rem; font-weight: 700; margin-bottom: .75rem;
+      color: var(--amber);
+    }
+    .maint-modal p { color: var(--text-mid); line-height: 1.7; margin-bottom: 1.5rem; }
+    .maint-modal .countdown {
+      font-family: var(--mono); font-size: 1.3rem; color: var(--amber);
+      font-weight: 600; margin-bottom: 1.5rem;
+    }
+    .maint-modal .btn {
+      padding: .65rem 1.5rem; background: var(--cyan); color: #000;
+      border: none; border-radius: 8px; font-weight: 600; font-size: .85rem;
+      cursor: pointer; font-family: var(--font); transition: all .2s;
+    }
+    .maint-modal .btn:hover { opacity: .9; }
+  </style>
 </head>
 <body>
+
+<div class="maint-overlay" id="maintOverlay">
+  <div class="maint-modal">
+    <h2 id="maintTitle">⚙️ Under Maintenance</h2>
+    <p id="maintMsg">We're doing some maintenance on the homelab. Everything will be back up in a few hours.</p>
+    <div class="countdown" id="maintCountdown"></div>
+    <button class="btn" onclick="document.getElementById('maintOverlay').classList.remove('active')">OK</button>
+  </div>
+</div>
 
 <div class="mouse-glow" id="mouseGlow"></div>
 <div class="progress-bar" id="progressBar"></div>
@@ -70,7 +110,7 @@
       </div>
       <div class="hs-sep"></div>
       <div class="hs-item">
-        <div style="display:flex;align-items:baseline;gap:0.05em"><span class="hs-num mono" id="uptimePct">—</span><span class="hs-suf mono" id="uptimeSuf" hidden>%</span></div>
+        <div style="display:flex;align-items:baseline;gap:.05em"><span class="hs-num mono" id="uptimePct">—</span><span class="hs-suf mono" id="uptimeSuf" hidden>%</span></div>
         <span class="hs-label mono">Estimated Uptime</span>
       </div>
     </div>
@@ -250,5 +290,72 @@
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
 <script src="script.js"></script>
+
+<!-- Maintenance check -->
+<script>
+(function() {
+  var SERVICE_NAMES = {
+    auth: 'Authentik', jellyfin: 'Jellyfin', seerr: 'Jellyseerr',
+    netbird: 'Netbird', npm: 'Nginx Proxy Manager', ripper: 'Ripper',
+    speedtest: 'Speed Test', vault: 'Vaultwarden', homeassistant: 'Home Assistant'
+  };
+  var redirectedFrom = new URLSearchParams(location.search).get('service');
+
+  var overlay = document.getElementById('maintOverlay');
+  var titleEl = document.getElementById('maintTitle');
+  var msgEl = document.getElementById('maintMsg');
+  var countdownEl = document.getElementById('maintCountdown');
+  var checked = false;
+
+  function check() {
+    if (checked) return;
+    checked = true;
+
+    fetch('/api/bf/maintenance/status')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.enabled) {
+          if (redirectedFrom && SERVICE_NAMES[redirectedFrom]) {
+            titleEl.textContent = '⚙️ ' + SERVICE_NAMES[redirectedFrom] + ' is under maintenance';
+          }
+          if (data.message) msgEl.textContent = data.message;
+          overlay.classList.add('active');
+
+          if (data.timeRemaining && data.timeRemaining > 0) {
+            var remaining = data.timeRemaining;
+            function tick() {
+              remaining = Math.max(0, remaining);
+              var h = Math.floor(remaining / 3600000);
+              var m = Math.floor((remaining % 3600000) / 60000);
+              var s = Math.floor((remaining % 60000) / 1000);
+              if (countdownEl) {
+                countdownEl.textContent = [
+                  String(h).padStart(2, '0'),
+                  String(m).padStart(2, '0'),
+                  String(s).padStart(2, '0')
+                ].join(':');
+              }
+              if (remaining <= 0) {
+                clearInterval(timer);
+                overlay.classList.remove('active');
+                return;
+              }
+              remaining -= 1000;
+            }
+            tick();
+            var timer = setInterval(tick, 1000);
+          }
+        }
+      })
+      .catch(function() {});
+  }
+
+  check();
+
+  // Re-check every 30s in case maintenance ends
+  setInterval(check, 30000);
+})();
+</script>
+
 </body>
 </html>
