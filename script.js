@@ -3,17 +3,56 @@
    ============================================================ */
 
 // ── Service Data ──────────────────────────────────────────
-const SERVICES = [
-  { name: 'Authentik', url: 'https://auth.bytefort.xyz', cat: 'infrastructure', desc: 'Identity and access management. Single sign-on for all your services.', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>' },
-  { name: 'Home Assistant', url: 'https://homeassistant.bytefort.xyz', cat: 'infrastructure', desc: 'Open-source home automation platform. Control and automate your smart home.', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>' },
-  { name: 'Jellyfin', url: 'https://jellyfin.bytefort.xyz', cat: 'media', desc: 'Open-source media streaming server. Movies, TV, music — streamed privately.', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5,3 19,12 5,21"/></svg>' },
-  { name: 'Netbird', url: 'https://netbird.bytefort.xyz', cat: 'infrastructure', desc: 'Self-hosted VPN and remote access. Secure mesh networking for all devices.', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>' },
-  { name: 'Nginx Proxy Manager', url: 'https://npm.bytefort.xyz', cat: 'network', desc: 'Reverse proxy and SSL management. Routes all bytefort subdomains with HTTPS.', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2"/><path d="M7 7h10M7 12h10M7 17h10"/></svg>' },
-  { name: 'Ripper', url: 'https://ripper.bytefort.xyz', cat: 'media', desc: 'Media ripping and conversion. Transcode and organize your media library.', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>' },
-  { name: 'Jellyseerr', url: 'https://seerr.bytefort.xyz', cat: 'media', desc: 'Media request and discovery. Request, track, and auto-download content.', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="14.5" r="0.5" fill="currentColor"/></svg>' },
-  { name: 'Speed Test', url: 'https://speedtest.bytefort.xyz', cat: 'network', desc: 'Self-hosted network speed test. Measure upload, download, and latency.', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1118 0"/><path d="M12 12l-3.5-5"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/></svg>' },
-  { name: 'Vaultwarden', url: 'https://vault.bytefort.xyz', cat: 'infrastructure', desc: 'Self-hosted password vault. Secure credential management for your family.', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>' }
+// Managed from the admin panel's Applications section. This built-in list
+// is only a fallback for the moment before the fetch below resolves, or if
+// it fails outright.
+var SERVICES = [
+  { name: 'Authentik', url: 'https://auth.bytefort.xyz', cat: 'infrastructure', desc: 'Identity and access management. Single sign-on for all your services.', icon: 'shield' },
+  { name: 'Home Assistant', url: 'https://homeassistant.bytefort.xyz', cat: 'infrastructure', desc: 'Open-source home automation platform. Control and automate your smart home.', icon: 'home' },
+  { name: 'Jellyfin', url: 'https://jellyfin.bytefort.xyz', cat: 'media', desc: 'Open-source media streaming server. Movies, TV, music — streamed privately.', icon: 'play' },
+  { name: 'Netbird', url: 'https://netbird.bytefort.xyz', cat: 'infrastructure', desc: 'Self-hosted VPN and remote access. Secure mesh networking for all devices.', icon: 'globe' },
+  { name: 'Nginx Proxy Manager', url: 'https://npm.bytefort.xyz', cat: 'network', desc: 'Reverse proxy and SSL management. Routes all bytefort subdomains with HTTPS.', icon: 'proxy' },
+  { name: 'Ripper', url: 'https://ripper.bytefort.xyz', cat: 'media', desc: 'Media ripping and conversion. Transcode and organize your media library.', icon: 'disc' },
+  { name: 'Jellyseerr', url: 'https://seerr.bytefort.xyz', cat: 'media', desc: 'Media request and discovery. Request, track, and auto-download content.', icon: 'chat' },
+  { name: 'Speed Test', url: 'https://speedtest.bytefort.xyz', cat: 'network', desc: 'Self-hosted network speed test. Measure upload, download, and latency.', icon: 'gauge' },
+  { name: 'Vaultwarden', url: 'https://vault.bytefort.xyz', cat: 'infrastructure', desc: 'Self-hosted password vault. Secure credential management for your family.', icon: 'lock' }
 ];
+
+// Named icon library — the admin panel's "add application" form picks one of
+// these by key instead of pasting raw SVG markup.
+var ICONS = {
+  shield: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+  home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>',
+  play: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5,3 19,12 5,21"/></svg>',
+  globe: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>',
+  proxy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2"/><path d="M7 7h10M7 12h10M7 17h10"/></svg>',
+  disc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>',
+  chat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="14.5" r="0.5" fill="currentColor"/></svg>',
+  gauge: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1118 0"/><path d="M12 12l-3.5-5"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/></svg>',
+  lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
+  server: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="6" rx="1"/><rect x="2" y="15" width="20" height="6" rx="1"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>',
+  terminal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>',
+  grid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>'
+};
+
+function iconFor(key) {
+  return ICONS[key] || ICONS.grid;
+}
+
+// Fetches the admin-managed app list. Resolves with SERVICES either way —
+// callers that need the final list should chain off this instead of reading
+// SERVICES synchronously at parse time.
+var SERVICES_READY = fetch('/api/bf/apps')
+  .then(function (r) { return r.json(); })
+  .then(function (data) {
+    if (Array.isArray(data.services) && data.services.length) {
+      SERVICES = data.services;
+    }
+    return SERVICES;
+  })
+  .catch(function () {
+    return SERVICES;
+  });
 
 // ── Typing Animation ────────────────────────────────────
 (function () {
@@ -74,7 +113,7 @@ const SERVICES = [
       
       card.innerHTML =
         '<div class="svc-card-top">' +
-          '<div class="svc-icon" data-cat="' + svc.cat + '">' + svc.icon + '</div>' +
+          '<div class="svc-icon" data-cat="' + svc.cat + '">' + iconFor(svc.icon) + '</div>' +
           '<span class="svc-badge mono" data-cat="' + svc.cat + '">' + svc.cat + '</span>' +
         '</div>' +
         '<h3 class="svc-name">' + svc.name + '</h3>' +
@@ -117,8 +156,10 @@ const SERVICES = [
     });
   }
 
-  renderCards();
-  applyFilter('all');
+  SERVICES_READY.then(function () {
+    renderCards();
+    applyFilter('all');
+  });
 
   // Filter buttons
   document.querySelectorAll('.filter-btn').forEach(function (btn) {
@@ -142,10 +183,13 @@ const SERVICES = [
 
   // Maps a service's display name (SERVICES[].name) to its subdomain key
   // (e.g. "Jellyfin" -> "jellyfin"), matching the keys the maintenance
-  // worker uses in state.affectedServices.
+  // worker uses in state.affectedServices. Rebuilt once SERVICES_READY
+  // resolves, since the app list is fetched, not hardcoded.
   const NAME_TO_KEY = {};
-  SERVICES.forEach(function (s) {
-    NAME_TO_KEY[s.name] = new URL(s.url).hostname.split('.')[0];
+  SERVICES_READY.then(function (services) {
+    services.forEach(function (s) {
+      NAME_TO_KEY[s.name] = new URL(s.url).hostname.split('.')[0];
+    });
   });
 
   // A service can be manually flagged under maintenance regardless of
@@ -258,11 +302,11 @@ const SERVICES = [
     }
   }
   
-  // Initial check
-  checkHealth();
-  
-  // Periodic check
-  setInterval(checkHealth, 30000);
+  // Initial check — wait for the app list so NAME_TO_KEY is populated first.
+  SERVICES_READY.then(function () {
+    checkHealth();
+    setInterval(checkHealth, 30000);
+  });
   
   // Manual refresh
   if (checkBtn) {
@@ -325,9 +369,12 @@ const SERVICES = [
         && Number.isFinite(lastCheck) && lastCheck >= trackingStart && lastCheck <= responseTime;
     });
     const uniqueValidNames = new Set(validServices.map(function (service) { return service.name.trim(); }));
-    if (data.services.length !== knownNames.length
-      || validServices.length !== knownNames.length
-      || uniqueValidNames.size !== knownNames.length) {
+    // Every entry the uptime API returned must be valid and unique — but its
+    // count no longer has to match the dashboard's app list, since apps
+    // added from the admin panel aren't necessarily tracked by the separate
+    // health-check worker yet.
+    if (data.services.length !== validServices.length
+      || uniqueValidNames.size !== validServices.length) {
       clearUptimeDisplay();
       return;
     }

@@ -64,19 +64,33 @@ async function putState(kv, state) {
   await kv.put('maintenance:state', JSON.stringify(state));
 }
 
-// Maps a service subdomain (e.g. "jellyfin" from jellyfin.bytefort.xyz) to its
-// canonical key in state.affectedServices. The root domain has no subdomain.
-const SUBDOMAIN_SERVICE_MAP = {
-  auth: 'auth',
-  jellyfin: 'jellyfin',
-  seerr: 'seerr',
-  netbird: 'netbird',
-  npm: 'npm',
-  ripper: 'ripper',
-  speedtest: 'speedtest',
-  vault: 'vault',
-  homeassistant: 'homeassistant'
-};
+// ── Services (dashboard app list) ────────────────────────
+// Editable from the admin panel's Applications section. Falls back to this
+// built-in list until an admin saves their own (kept in sync with the
+// original hardcoded SERVICES array in script.js).
+const DEFAULT_SERVICES = [
+  { name: 'Authentik', url: 'https://auth.bytefort.xyz', cat: 'infrastructure', desc: 'Identity and access management. Single sign-on for all your services.', icon: 'shield' },
+  { name: 'Home Assistant', url: 'https://homeassistant.bytefort.xyz', cat: 'infrastructure', desc: 'Open-source home automation platform. Control and automate your smart home.', icon: 'home' },
+  { name: 'Jellyfin', url: 'https://jellyfin.bytefort.xyz', cat: 'media', desc: 'Open-source media streaming server. Movies, TV, music — streamed privately.', icon: 'play' },
+  { name: 'Netbird', url: 'https://netbird.bytefort.xyz', cat: 'infrastructure', desc: 'Self-hosted VPN and remote access. Secure mesh networking for all devices.', icon: 'globe' },
+  { name: 'Nginx Proxy Manager', url: 'https://npm.bytefort.xyz', cat: 'network', desc: 'Reverse proxy and SSL management. Routes all bytefort subdomains with HTTPS.', icon: 'proxy' },
+  { name: 'Ripper', url: 'https://ripper.bytefort.xyz', cat: 'media', desc: 'Media ripping and conversion. Transcode and organize your media library.', icon: 'disc' },
+  { name: 'Jellyseerr', url: 'https://seerr.bytefort.xyz', cat: 'media', desc: 'Media request and discovery. Request, track, and auto-download content.', icon: 'chat' },
+  { name: 'Speed Test', url: 'https://speedtest.bytefort.xyz', cat: 'network', desc: 'Self-hosted network speed test. Measure upload, download, and latency.', icon: 'gauge' },
+  { name: 'Vaultwarden', url: 'https://vault.bytefort.xyz', cat: 'infrastructure', desc: 'Self-hosted password vault. Secure credential management for your family.', icon: 'lock' }
+];
+
+async function getServices(kv) {
+  try {
+    const raw = await kv.get('services:list', 'json');
+    if (Array.isArray(raw) && raw.length) return raw;
+  } catch (e) {}
+  return DEFAULT_SERVICES;
+}
+
+async function putServices(kv, services) {
+  await kv.put('services:list', JSON.stringify(services));
+}
 
 const ROOT_HOSTS = new Set(['bytefort.xyz', 'www.bytefort.xyz']);
 
@@ -170,6 +184,32 @@ async function handleRequest(req, env) {
       }
     }
 
+    // ── Applications (dashboard app list) ────────────────
+    // GET is public — the dashboard itself needs this to render cards.
+    if (url.pathname === '/api/bf/apps' && req.method === 'GET') {
+      return json({ services: await getServices(kv) });
+    }
+
+    if (url.pathname === '/api/bf/apps' && req.method === 'POST') {
+      const authErr = checkAdminAuth(req, env);
+      if (authErr) return authErr;
+      const rateErr = checkRateLimit('admin-api');
+      if (rateErr) return rateErr;
+
+      const body = await req.json().catch(() => ({}));
+      if (!Array.isArray(body.services)) return json({ error: 'services-required' }, 400);
+      for (const s of body.services) {
+        if (!s.name || !s.url || !s.cat) {
+          return json({ error: 'invalid-service', detail: 'each service needs name, url, and cat' }, 400);
+        }
+        try { new URL(s.url); } catch (e) {
+          return json({ error: 'invalid-url', detail: s.url }, 400);
+        }
+      }
+      await putServices(kv, body.services);
+      return json({ success: true, services: body.services });
+    }
+
     // ── Public status endpoint (no auth needed) ─────────
     if (url.pathname === '/api/bf/maintenance/status') {
       const state = await getState(kv);
@@ -235,7 +275,7 @@ async function handleRequest(req, env) {
   // just proxy through. During maintenance that targets this service — or
   // maintenance targeting "all" — redirect to the dashboard instead of
   // letting visitors hit a dead/unreachable origin.
-  const svcKey = SUBDOMAIN_SERVICE_MAP[subdomainOf(url.hostname)];
+  const svcKey = subdomainOf(url.hostname);
   if (svcKey) {
     const state = await getState(kv);
     const gated = state.enabled &&

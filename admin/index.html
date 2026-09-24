@@ -134,7 +134,7 @@
     .field-row {
       display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;
     }
-    .field .hint { font-size: .72rem; color: var(--text-dim); margin-top: .35rem; font-family: var(--mono); }
+    .field .hint, .hint { font-size: .72rem; color: var(--text-dim); margin-top: .35rem; font-family: var(--mono); line-height: 1.6; }
 
     /* Service checkboxes */
     .svc-list { display: flex; flex-direction: column; gap: .5rem; }
@@ -147,6 +147,23 @@
     .svc-check input { accent-color: var(--cyan); width: 16px; height: 16px; cursor: pointer; }
     .svc-check label { cursor: pointer; flex: 1; display: flex; justify-content: space-between; align-items: center; }
     .svc-check .svc-url { font-family: var(--mono); font-size: .72rem; color: var(--text-dim); }
+
+    /* Applications list */
+    .app-row {
+      display: flex; align-items: center; justify-content: space-between; gap: .75rem;
+      padding: .6rem .9rem; background: var(--bg); border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+    .app-row .app-info { display: flex; flex-direction: column; gap: .15rem; min-width: 0; }
+    .app-row .app-name { font-weight: 600; font-size: .88rem; }
+    .app-row .app-url { font-family: var(--mono); font-size: .72rem; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .btn-remove {
+      font-family: var(--mono); font-size: .7rem; color: var(--danger);
+      border: 1px solid rgba(248,113,113,.3); padding: .35rem .8rem; border-radius: 6px;
+      background: transparent; cursor: pointer; transition: all .2s; flex-shrink: 0;
+    }
+    .btn-remove:hover { background: rgba(248,113,113,.1); border-color: var(--danger); }
+    .app-empty { color: var(--text-dim); font-size: .82rem; font-family: var(--mono); padding: .5rem 0; }
 
     /* Buttons */
     .btn-action {
@@ -300,6 +317,64 @@
 
     <hr class="divider" />
 
+    <div class="status-card">
+      <div class="status-card-header"><h2>Applications</h2></div>
+      <div class="hint" style="margin-bottom:1rem;">
+        Shown on the dashboard. Adding one here doesn't automatically route its
+        subdomain through the maintenance worker — the app will appear and can
+        be targeted for maintenance, but the redirect only fires for
+        subdomains already wired up (ask if a new one needs that).
+      </div>
+      <div class="svc-list" id="appsList"></div>
+
+      <hr class="divider" style="margin: 1.5rem 0;" />
+
+      <div class="field-row">
+        <div class="field">
+          <label>NAME</label>
+          <input type="text" id="appName" placeholder="Grafana" />
+        </div>
+        <div class="field">
+          <label>URL</label>
+          <input type="text" id="appUrl" placeholder="https://grafana.bytefort.xyz" />
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>CATEGORY</label>
+          <select id="appCat">
+            <option value="infrastructure">Infrastructure</option>
+            <option value="media">Media</option>
+            <option value="network">Network</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>ICON</label>
+          <select id="appIcon">
+            <option value="grid">Grid (default)</option>
+            <option value="shield">Shield</option>
+            <option value="home">Home</option>
+            <option value="play">Play</option>
+            <option value="globe">Globe</option>
+            <option value="proxy">Proxy</option>
+            <option value="disc">Disc</option>
+            <option value="chat">Chat</option>
+            <option value="gauge">Gauge</option>
+            <option value="lock">Lock</option>
+            <option value="server">Server</option>
+            <option value="terminal">Terminal</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>DESCRIPTION</label>
+        <textarea id="appDesc" placeholder="What does this do?"></textarea>
+      </div>
+      <button class="btn-action btn-save" id="addAppBtn">Add Application</button>
+    </div>
+
+    <hr class="divider" />
+
     <div class="redirect-notice" id="redirectNotice">
       <p>Maintenance is active on this server but your main site may have its own check. Use the quick link below to verify:</p>
       <a href="/" id="previewLink" target="_blank" class="btn-action btn-save">Visit bytefort.xyz</a>
@@ -318,6 +393,7 @@
   let currentState = null;
   let refreshInterval = null;
   let countdownInterval = null;
+  let apps = [];
 
   const $ = (sel) => document.querySelector(sel);
 
@@ -376,6 +452,7 @@
   async function showDash() {
     $('#loginScreen').style.display = 'none';
     $('#dash').classList.add('active');
+    await loadApps();
     await refresh(true);
     // Periodic poll only refreshes read-only status (toggle, countdown, etc) —
     // it must never repopulate the form fields below, or it silently wipes out
@@ -443,28 +520,28 @@
   }
 
   function renderSvcCheckboxes(data) {
-    const services = [
-      { name: 'Authentik', url: 'auth.bytefort.xyz', key: 'auth' },
-      { name: 'Jellyfin', url: 'jellyfin.bytefort.xyz', key: 'jellyfin' },
-      { name: 'Jellyseerr', url: 'seerr.bytefort.xyz', key: 'seerr' },
-      { name: 'Netbird', url: 'netbird.bytefort.xyz', key: 'netbird' },
-      { name: 'Nginx Proxy Mgr', url: 'npm.bytefort.xyz', key: 'npm' },
-      { name: 'Ripper', url: 'ripper.bytefort.xyz', key: 'ripper' },
-      { name: 'Speed Test', url: 'speedtest.bytefort.xyz', key: 'speedtest' },
-      { name: 'Vaultwarden', url: 'vault.bytefort.xyz', key: 'vault' },
-      { name: 'Home Assistant', url: 'homeassistant.bytefort.xyz', key: 'homeassistant' },
-    ];
-
     const checked = new Set(data.affectedServices || []);
 
+    if (!apps.length) {
+      $('#svcList').innerHTML = '<div class="app-empty">No applications yet — add one below first.</div>';
+      return;
+    }
+
     let html = '';
-    services.forEach(svc => {
-      const checkedAttr = checked.has(svc.key) ? 'checked' : '';
+    apps.forEach(app => {
+      let key, host;
+      try {
+        host = new URL(app.url).hostname;
+        key = host.split('.')[0];
+      } catch (e) {
+        return;
+      }
+      const checkedAttr = checked.has(key) ? 'checked' : '';
       html += `<div class="svc-check">
-        <input type="checkbox" id="svc-${svc.key}" ${checkedAttr} />
-        <label for="svc-${svc.key}">
-          ${svc.name}
-          <span class="svc-url">${svc.url}</span>
+        <input type="checkbox" id="svc-${key}" ${checkedAttr} />
+        <label for="svc-${key}">
+          ${app.name}
+          <span class="svc-url">${host}</span>
         </label>
       </div>`;
     });
@@ -603,6 +680,99 @@
         }
       }, 1500);
     });
+  });
+
+  // ── Applications ──────────────────────────────────
+  async function loadApps() {
+    try {
+      const res = await fetch(API + '/apps');
+      const data = await res.json();
+      apps = Array.isArray(data.services) ? data.services : [];
+      renderApps();
+    } catch (e) {
+      console.warn('Failed to load apps:', e);
+    }
+  }
+
+  function renderApps() {
+    if (!apps.length) {
+      $('#appsList').innerHTML = '<div class="app-empty">No applications configured.</div>';
+      return;
+    }
+    let html = '';
+    apps.forEach((app, i) => {
+      let host = app.url;
+      try { host = new URL(app.url).hostname; } catch (e) {}
+      html += `<div class="app-row">
+        <div class="app-info">
+          <span class="app-name">${app.name}</span>
+          <span class="app-url">${host}</span>
+        </div>
+        <button class="btn-remove" data-idx="${i}">Remove</button>
+      </div>`;
+    });
+    $('#appsList').innerHTML = html;
+
+    $('#appsList').querySelectorAll('.btn-remove').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const idx = parseInt(btn.dataset.idx, 10);
+        const removed = apps[idx];
+        if (!confirm(`Remove "${removed.name}" from the dashboard?`)) return;
+        apps.splice(idx, 1);
+        renderApps();
+        await saveApps();
+        // The affected-services checkboxes reference apps by subdomain key,
+        // so they need to reflect the removal too.
+        if (currentState) renderSvcCheckboxes(currentState);
+      });
+    });
+  }
+
+  async function saveApps() {
+    if (!secret) return;
+    try {
+      const res = await fetch(API + '/apps', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-BF-Secret': secret },
+        body: JSON.stringify({ services: apps })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast('Applications updated');
+      } else {
+        toast(data.error || 'Failed to save applications', false);
+      }
+    } catch (e) {
+      toast('Connection failed', false);
+    }
+  }
+
+  $('#addAppBtn').addEventListener('click', async () => {
+    const name = $('#appName').value.trim();
+    const url = $('#appUrl').value.trim();
+    const cat = $('#appCat').value;
+    const icon = $('#appIcon').value;
+    const desc = $('#appDesc').value.trim();
+
+    if (!name || !url) {
+      toast('Name and URL are required', false);
+      return;
+    }
+    try {
+      new URL(url);
+    } catch (e) {
+      toast('Enter a full URL, e.g. https://grafana.bytefort.xyz', false);
+      return;
+    }
+
+    apps.push({ name, url, cat, icon, desc });
+    renderApps();
+    await saveApps();
+    if (currentState) renderSvcCheckboxes(currentState);
+
+    $('#appName').value = '';
+    $('#appUrl').value = '';
+    $('#appDesc').value = '';
   });
 
   // ── Init ──────────────────────────────────────────
