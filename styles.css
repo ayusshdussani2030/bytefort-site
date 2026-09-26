@@ -476,6 +476,8 @@ button { font-family: var(--font); cursor: pointer; border: none; background: no
 .svc-card:has([data-cat="network"]) { --cat-color: var(--cat-network); }
 .svc-card.offline { border-color: rgba(248,113,113,0.3); }
 .svc-card.offline::before { background: var(--danger); }
+.svc-card.maintenance { border-color: rgba(252,211,77,0.35); }
+.svc-card.maintenance::before { background: var(--amber); }
 .svc-card.hidden { display: none; }
 
 .svc-card-top { display: flex; align-items: center; justify-content: space-between; position: relative; z-index: 1; }
@@ -526,11 +528,13 @@ button { font-family: var(--font); cursor: pointer; border: none; background: no
   font-weight: 500;
 }
 .svc-status.offline { color: var(--danger); }
+.svc-status.maintenance { color: var(--amber); }
 .svc-dot {
   display: inline-block; width: 6px; height: 6px; border-radius: 50%;
   background: var(--green); animation: pulse 2.4s ease infinite;
 }
 .svc-dot.offline { background: var(--danger); animation: none; box-shadow: 0 0 8px var(--danger); }
+.svc-dot.maintenance { background: var(--amber); animation: none; box-shadow: 0 0 8px var(--amber); }
 
 /* ─── SPECS ─── */
 .s-specs {

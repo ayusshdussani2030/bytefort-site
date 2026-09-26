@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin — bytefort.xyz</title>
+  <meta name="description" content="bytefort maintenance admin panel" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --cyan: #67e8f9;
+      --green: #4ade80;
+      --amber: #fcd34d;
+      --danger: #f87171;
+      --bg: #05070b;
+      --bg-1: #070a10;
+      --bg-2: #0c101a;
+      --bg-3: #111725;
+      --text: #e2e8f0;
+      --text-mid: #94a3b8;
+      --text-dim: #64748b;
+      --font: 'Space Grotesk', system-ui, sans-serif;
+      --mono: 'JetBrains Mono', 'SF Mono', monospace;
+      --line: rgba(148,176,210,0.07);
+      --line-mid: rgba(148,176,210,0.14);
+    }
+
+    body {
+      font-family: var(--font); background: var(--bg); color: var(--text);
+      min-height: 100vh; padding: 2rem 1rem;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    .max-w { max-width: 720px; margin: 0 auto; }
+
+    /* Login */
+    .login-screen {
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100vh;
+    }
+    .login-box {
+      background: var(--bg-2); border: 1px solid var(--line-mid);
+      border-radius: 16px; padding: 2.5rem; width: 100%; max-width: 380px;
+      text-align: center;
+    }
+    .login-box h1 {
+      font-family: var(--mono); font-size: 1.1rem; margin-bottom: .5rem;
+      color: var(--cyan);
+    }
+    .login-box p { font-size: .85rem; color: var(--text-mid); margin-bottom: 2rem; }
+    .login-box input {
+      width: 100%; padding: .75rem 1rem; background: var(--bg);
+      border: 1px solid var(--line-mid); border-radius: 8px;
+      color: var(--text); font-family: var(--mono); font-size: .85rem;
+      outline: none; margin-bottom: 1rem;
+    }
+    .login-box input:focus { border-color: var(--cyan); }
+    .login-box .btn {
+      width: 100%; padding: .75rem; background: var(--cyan); color: #000;
+      border: none; border-radius: 8px; font-weight: 600; font-size: .85rem;
+      cursor: pointer; transition: all .2s;
+    }
+    .login-box .btn:hover { opacity: .9; }
+    .login-box .btn:disabled { opacity: .5; cursor: not-allowed; }
+    .login-error { color: var(--danger); font-size: .78rem; margin-top: .75rem; min-height: 1.2em; }
+
+    /* Dashboard */
+    .dash { display: none; }
+    .dash.active { display: block; }
+
+    .dash-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 2.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--line);
+    }
+    .dash-header h1 { font-size: 1.3rem; }
+    .dash-header h1 span { color: var(--cyan); }
+    .btn-logout {
+      font-family: var(--mono); font-size: .72rem; color: var(--text-dim);
+      border: 1px solid var(--line); padding: .4rem .9rem; border-radius: 6px;
+      background: transparent; cursor: pointer; transition: all .2s;
+    }
+    .btn-logout:hover { border-color: var(--line-mid); color: var(--text); }
+
+    /* Status card */
+    .status-card {
+      background: var(--bg-2); border: 1px solid var(--line-mid);
+      border-radius: 14px; padding: 1.5rem; margin-bottom: 1.5rem;
+    }
+    .status-card-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 1.25rem;
+    }
+    .status-card-header h2 { font-size: 1rem; font-weight: 600; }
+
+    /* Toggle switch */
+    .toggle {
+      position: relative; width: 52px; height: 28px;
+    }
+    .toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .toggle-track {
+      position: absolute; inset: 0; background: var(--bg-3); border-radius: 999px;
+      cursor: pointer; transition: background .3s;
+    }
+    .toggle-track::after {
+      content: ''; position: absolute; top: 3px; left: 3px;
+      width: 22px; height: 22px; background: var(--text-mid); border-radius: 50%;
+      transition: all .3s;
+    }
+    .toggle input:checked + .toggle-track { background: var(--green); }
+    .toggle input:checked + .toggle-track::after { transform: translateX(24px); background: #fff; }
+    .toggle input { cursor: pointer; }
+
+    /* Form fields */
+    .field { margin-bottom: 1.25rem; }
+    .field label {
+      display: block; font-size: .78rem; color: var(--text-dim);
+      font-family: var(--mono); letter-spacing: .08em; margin-bottom: .5rem;
+    }
+    .field input, .field textarea, .field select {
+      width: 100%; padding: .7rem .9rem; background: var(--bg);
+      border: 1px solid var(--line-mid); border-radius: 8px;
+      color: var(--text); font-family: var(--font); font-size: .9rem;
+      outline: none; transition: border-color .2s;
+    }
+    .field input:focus, .field textarea:focus, .field select:focus { border-color: var(--cyan); }
+    .field textarea { resize: vertical; min-height: 80px; }
+    .field select { cursor: pointer; }
+    .field-row {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;
+    }
+    .field .hint { font-size: .72rem; color: var(--text-dim); margin-top: .35rem; font-family: var(--mono); }
+
+    /* Service checkboxes */
+    .svc-list { display: flex; flex-direction: column; gap: .5rem; }
+    .svc-check {
+      display: flex; align-items: center; gap: .75rem;
+      padding: .6rem .9rem; background: var(--bg); border: 1px solid var(--line);
+      border-radius: 8px; cursor: pointer; transition: all .2s;
+    }
+    .svc-check:hover { border-color: var(--line-mid); }
+    .svc-check input { accent-color: var(--cyan); width: 16px; height: 16px; cursor: pointer; }
+    .svc-check label { cursor: pointer; flex: 1; display: flex; justify-content: space-between; align-items: center; }
+    .svc-check .svc-url { font-family: var(--mono); font-size: .72rem; color: var(--text-dim); }
+
+    /* Buttons */
+    .btn-action {
+      padding: .65rem 1.5rem; border-radius: 8px; font-weight: 600; font-size: .82rem;
+      border: none; cursor: pointer; transition: all .2s; font-family: var(--font);
+    }
+    .btn-save {
+      background: var(--cyan); color: #000;
+    }
+    .btn-save:hover { opacity: .9; }
+    .btn-apply {
+      background: var(--bg-3); color: var(--text-mid); border: 1px solid var(--line);
+    }
+    .btn-apply:hover { border-color: var(--line-mid); }
+
+    /* Status info */
+    .info-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;
+    }
+    .info-item {
+      background: var(--bg); border: 1px solid var(--line);
+      border-radius: 10px; padding: 1rem;
+    }
+    .info-item .label { font-size: .7rem; color: var(--text-dim); font-family: var(--mono); letter-spacing: .08em; text-transform: uppercase; margin-bottom: .35rem; }
+    .info-item .value { font-family: var(--mono); font-size: .9rem; color: var(--text); }
+
+    /* Section divider */
+    .divider {
+      border: none; border-top: 1px solid var(--line); margin: 2rem 0;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(8px);
+      background: rgba(12,16,26,0.95); border: 1px solid var(--line-mid);
+      border-radius: 10px; padding: .7rem 1.4rem; font-family: var(--mono);
+      font-size: .78rem; opacity: 0; pointer-events: none; z-index: 999;
+      transition: all .3s; white-space: nowrap;
+    }
+    .toast.ok { color: var(--green); }
+    .toast.err { color: var(--danger); }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* Redirect notice */
+    .redirect-notice {
+      display: none; background: var(--bg-2); border: 1px solid var(--line-mid);
+      border-radius: 14px; padding: 1.5rem; margin-bottom: 2rem; text-align: center;
+    }
+    .redirect-notice p { color: var(--text-mid); font-size: .9rem; margin-bottom: 1rem; }
+
+    @media (max-width: 520px) {
+      .field-row { grid-template-columns: 1fr; }
+      .info-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Login Screen -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-box">
+    <h1>[bf].admin</h1>
+    <p>Enter your admin password to continue</p>
+    <form id="loginForm">
+      <input type="password" id="passwordInput" placeholder="Password" autocomplete="off" />
+      <button type="submit" class="btn" id="loginBtn">Sign In</button>
+    </form>
+    <div class="login-error" id="loginError"></div>
+  </div>
+</div>
+
+<!-- Dashboard -->
+<div class="dash" id="dash">
+  <div class="max-w">
+    <div class="dash-header">
+      <h1>[bf].<span>admin</span></h1>
+      <button class="btn-logout" id="logoutBtn">Logout</button>
+    </div>
+
+    <div class="status-card">
+      <div class="status-card-header">
+        <h2>Maintenance Mode</h2>
+        <div class="toggle">
+          <input type="checkbox" id="maintToggle" />
+          <div class="toggle-track" onclick="document.getElementById('maintToggle').click()"></div>
+        </div>
+      </div>
+      <div class="info-grid" id="statusInfo">
+        <div class="info-item">
+          <div class="label">Status</div>
+          <div class="value" id="statusVal">—</div>
+        </div>
+        <div class="info-item">
+          <div class="label">Time Remaining</div>
+          <div class="value" id="timeRemaining">—</div>
+        </div>
+        <div class="info-item">
+          <div class="label">Started</div>
+          <div class="value" id="startedAt">—</div>
+        </div>
+        <div class="info-item">
+          <div class="label">Target</div>
+          <div class="value" id="targetVal">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="status-card">
+      <div class="status-card-header"><h2>Message</h2></div>
+      <div class="field">
+        <textarea id="messageInput" placeholder="What to tell visitors..."></textarea>
+        <div class="hint">Displayed on the maintenance page</div>
+      </div>
+    </div>
+
+    <hr class="divider" />
+
+    <div class="status-card">
+      <div class="status-card-header"><h2>Duration & Target</h2></div>
+
+      <div class="field-row">
+        <div class="field">
+          <label>DURATION</label>
+          <input type="number" id="durationInput" min="0" max="168" step="0.5" value="2" />
+          <div class="hint">Hours from now (0.5 = 30 min)</div>
+        </div>
+        <div class="field">
+          <label>TARGET</label>
+          <select id="targetSelect">
+            <option value="all">All Services</option>
+            <option value="partial">Partial (Specific Services)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="status-card" id="partialCard" style="display:none">
+      <div class="status-card-header"><h2>Affected Services</h2></div>
+      <div class="svc-list" id="svcList"></div>
+    </div>
+
+    <hr class="divider" />
+
+    <div class="status-card">
+      <div class="status-card-header"><h2>Actions</h2></div>
+      <div style="display:flex;gap:.75rem;flex-wrap:wrap;">
+        <button class="btn-action btn-save" id="saveBtn">Save Configuration</button>
+        <button class="btn-action btn-apply" id="quickCancelBtn">Quick Cancel</button>
+      </div>
+    </div>
+
+    <hr class="divider" />
+
+    <div class="redirect-notice" id="redirectNotice">
+      <p>Maintenance is active on this server but your main site may have its own check. Use the quick link below to verify:</p>
+      <a href="/" id="previewLink" target="_blank" class="btn-action btn-save">Visit bytefort.xyz</a>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  const API = '/api/bf';
+  const SECRET_KEY = 'bf_admin_ok';
+
+  let secret = '';
+  let currentState = null;
+  let refreshInterval = null;
+  let countdownInterval = null;
+
+  const $ = (sel) => document.querySelector(sel);
+
+  // ── Toast ─────────────────────────────────────────
+  function toast(msg, ok = true) {
+    const el = $('#toast');
+    el.textContent = msg;
+    el.className = 'toast ' + (ok ? 'ok' : 'err') + ' show';
+    setTimeout(() => { el.classList.remove('show'); }, 3000);
+  }
+
+  // ── Login ─────────────────────────────────────────
+  $('#loginForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    const pw = $('#passwordInput').value.trim();
+    if (!pw) return;
+
+    $('#loginBtn').disabled = true;
+    $('#loginError').textContent = '';
+
+    try {
+      const res = await fetch(API + '/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pw })
+      });
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        secret = data.token;
+        localStorage.setItem(SECRET_KEY, secret);
+        showDash();
+      } else {
+        $('#loginError').textContent = data.error === 'invalid-password'
+          ? 'Invalid password' : 'Connection failed';
+      }
+    } catch (e) {
+      $('#loginError').textContent = 'Connection failed';
+    } finally {
+      $('#loginBtn').disabled = false;
+    }
+  });
+
+  // ── Logout ────────────────────────────────────────
+  $('#logoutBtn').addEventListener('click', () => {
+    localStorage.removeItem(SECRET_KEY);
+    secret = '';
+    clearInterval(refreshInterval);
+    clearInterval(countdownInterval);
+    $('#loginScreen').style.display = 'flex';
+    $('#dash').classList.remove('active');
+    $('#passwordInput').value = '';
+  });
+
+  // ── Show dashboard ────────────────────────────────
+  async function showDash() {
+    $('#loginScreen').style.display = 'none';
+    $('#dash').classList.add('active');
+    await refresh(true);
+    // Periodic poll only refreshes read-only status (toggle, countdown, etc) —
+    // it must never repopulate the form fields below, or it silently wipes out
+    // whatever the admin is mid-way through editing (e.g. checking several
+    // service boxes takes longer than 10s) before they get a chance to save.
+    refreshInterval = setInterval(() => refresh(false), 10000);
+  }
+
+  // ── Fetch state ───────────────────────────────────
+  async function refresh(populateForm) {
+    try {
+      const res = await fetch(API + '/maintenance/status', {
+        headers: { 'X-BF-Secret': secret }
+      });
+      if (res.status === 401) {
+        toast('Session expired, please login', false);
+        $('#logoutBtn').click();
+        return;
+      }
+      const data = await res.json();
+      currentState = data;
+      renderState(data, populateForm);
+    } catch (e) {
+      console.warn('Failed to refresh:', e);
+    }
+  }
+
+  // ── Render state ──────────────────────────────────
+  function renderState(data, populateForm) {
+    const toggle = $('#maintToggle');
+    toggle.checked = data.enabled;
+
+    $('#statusVal').textContent = data.enabled ? 'ACTIVE' : 'OFF';
+    $('#statusVal').style.color = data.enabled ? 'var(--green)' : 'var(--text-dim)';
+
+    if (data.enabled) {
+      $('#startedAt').textContent = data.activatedAt
+        ? new Date(data.activatedAt).toLocaleString() : '—';
+      $('#targetVal').textContent = data.targetServices === 'all'
+        ? 'All Services' : 'Partial';
+      updateCountdown(data.timeRemaining);
+    } else {
+      $('#startedAt').textContent = '—';
+      $('#targetVal').textContent = '—';
+      $('#timeRemaining').textContent = '—';
+      clearInterval(countdownInterval);
+    }
+
+    $('#redirectNotice').style.display = data.enabled ? 'block' : 'none';
+
+    // Only overwrite editable fields on an explicit (re)load, never on the
+    // periodic background poll — see the comment in showDash().
+    if (!populateForm) return;
+
+    $('#messageInput').value = data.message || '';
+    $('#durationInput').value = data.estimatedRestore
+      ? Math.max(0.5, Math.round((new Date(data.estimatedRestore).getTime() - Date.now()) / 3600000 * 10) / 10)
+      : 2;
+    $('#targetSelect').value = data.targetServices || 'all';
+
+    renderSvcCheckboxes(data);
+
+    const partialCard = $('#partialCard');
+    partialCard.style.display = data.targetServices === 'partial' ? 'block' : 'none';
+  }
+
+  function renderSvcCheckboxes(data) {
+    const services = [
+      { name: 'Authentik', url: 'auth.bytefort.xyz', key: 'auth' },
+      { name: 'Jellyfin', url: 'jellyfin.bytefort.xyz', key: 'jellyfin' },
+      { name: 'Jellyseerr', url: 'seerr.bytefort.xyz', key: 'seerr' },
+      { name: 'Netbird', url: 'netbird.bytefort.xyz', key: 'netbird' },
+      { name: 'Nginx Proxy Mgr', url: 'npm.bytefort.xyz', key: 'npm' },
+      { name: 'Ripper', url: 'ripper.bytefort.xyz', key: 'ripper' },
+      { name: 'Speed Test', url: 'speedtest.bytefort.xyz', key: 'speedtest' },
+      { name: 'Vaultwarden', url: 'vault.bytefort.xyz', key: 'vault' },
+      { name: 'Home Assistant', url: 'homeassistant.bytefort.xyz', key: 'homeassistant' },
+    ];
+
+    const checked = new Set(data.affectedServices || []);
+
+    let html = '';
+    services.forEach(svc => {
+      const checkedAttr = checked.has(svc.key) ? 'checked' : '';
+      html += `<div class="svc-check">
+        <input type="checkbox" id="svc-${svc.key}" ${checkedAttr} />
+        <label for="svc-${svc.key}">
+          ${svc.name}
+          <span class="svc-url">${svc.url}</span>
+        </label>
+      </div>`;
+    });
+    $('#svcList').innerHTML = html;
+  }
+
+  function updateCountdown(ms) {
+    clearInterval(countdownInterval);
+    let remaining = ms || 0;
+    function tick() {
+      remaining = Math.max(0, remaining - 1000);
+      const hours = Math.floor(remaining / 3600000);
+      const mins = Math.floor((remaining % 3600000) / 60000);
+      const secs = Math.floor((remaining % 60000) / 1000);
+      $('#timeRemaining').textContent = `${hours}h ${String(mins).padStart(2, '0')}m ${String(secs).padStart(2, '0')}s`;
+    }
+    tick();
+    countdownInterval = setInterval(tick, 1000);
+  }
+
+  // ── Toggle ────────────────────────────────────────
+  $('#maintToggle').addEventListener('change', async function () {
+    if (secret) {
+      await saveState();
+    }
+  });
+
+  // ── Save ──────────────────────────────────────────
+  async function saveState() {
+    if (!secret) return;
+
+    const body = {
+      enabled: $('#maintToggle').checked,
+      message: $('#messageInput').value.trim(),
+      durationHours: parseFloat($('#durationInput').value) || 2,
+      activatedBy: 'admin'
+    };
+
+    if ($('#targetSelect').value === 'partial') {
+      body.targetServices = 'partial';
+      body.affectedServices = [];
+      document.querySelectorAll('#svcList input[type=checkbox]:checked').forEach(cb => {
+        body.affectedServices.push(cb.id.replace('svc-', ''));
+      });
+    } else {
+      body.targetServices = 'all';
+      body.affectedServices = [];
+    }
+
+    $('#saveBtn').disabled = true;
+    $('#saveBtn').textContent = 'Saving...';
+
+    try {
+      const res = await fetch(API + '/maintenance/toggle', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-BF-Secret': secret
+        },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast('Configuration saved');
+        await refresh(true);
+      } else {
+        toast(data.error === 'rate-limited' ? 'Too many requests, wait a moment' : 'Failed to save', false);
+      }
+    } catch (e) {
+      toast('Connection failed', false);
+    } finally {
+      $('#saveBtn').disabled = false;
+      $('#saveBtn').textContent = 'Save Configuration';
+    }
+  }
+
+  $('#saveBtn').addEventListener('click', saveState);
+
+  // ── Quick cancel ──────────────────────────────────
+  $('#quickCancelBtn').addEventListener('click', async () => {
+    if (!secret) return;
+    if (!confirm('Disable maintenance mode? All services will come back online.')) return;
+
+    $('#saveBtn').textContent = 'Disabling...';
+    $('#saveBtn').disabled = true;
+
+    try {
+      const res = await fetch(API + '/maintenance/toggle', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-BF-Secret': secret
+        },
+        body: JSON.stringify({ enabled: false, activatedBy: 'admin' })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast('Maintenance disabled');
+        await refresh(true);
+      } else {
+        toast(data.error || 'Failed', false);
+      }
+    } catch (e) {
+      toast('Connection failed', false);
+    } finally {
+      $('#saveBtn').textContent = 'Save Configuration';
+      $('#saveBtn').disabled = false;
+    }
+  });
+
+  // ── Partial target toggle ─────────────────────────
+  $('#targetSelect').addEventListener('change', function () {
+    const card = $('#partialCard');
+    card.style.display = this.value === 'partial' ? 'block' : 'none';
+  });
+
+  // ── Auto-save on input ────────────────────────────
+  let saveTimeout = null;
+  ['messageInput', 'durationInput'].forEach(id => {
+    $(`#${id}`).addEventListener('input', () => {
+      clearTimeout(saveTimeout);
+      saveTimeout = setTimeout(() => {
+        if (secret) {
+          const body = {
+            message: $('#messageInput').value.trim(),
+            durationHours: parseFloat($('#durationInput').value) || 2
+          };
+          fetch(API + '/maintenance/message', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-BF-Secret': secret
+            },
+            body: JSON.stringify(body)
+          }).catch(() => {});
+        }
+      }, 1500);
+    });
+  });
+
+  // ── Init ──────────────────────────────────────────
+  const saved = localStorage.getItem(SECRET_KEY);
+  if (saved) {
+    secret = saved;
+    showDash();
+  }
+})();
+</script>
+
+</body>
+</html>
