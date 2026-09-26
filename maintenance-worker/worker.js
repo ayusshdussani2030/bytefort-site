@@ -64,19 +64,6 @@ async function putState(kv, state) {
   await kv.put('maintenance:state', JSON.stringify(state));
 }
 
-// ── Homelab metrics (pushed from a local script — see METRICS_SETUP.md) ──
-async function getMetrics(kv) {
-  try {
-    return await kv.get('homelab:metrics', 'json');
-  } catch (e) {
-    return null;
-  }
-}
-
-async function putMetrics(kv, metrics) {
-  await kv.put('homelab:metrics', JSON.stringify(metrics));
-}
-
 // Maps a service subdomain (e.g. "jellyfin" from jellyfin.bytefort.xyz) to its
 // canonical key in state.affectedServices. The root domain has no subdomain.
 const SUBDOMAIN_SERVICE_MAP = {
@@ -197,31 +184,6 @@ async function handleRequest(req, env) {
           ? Math.max(0, new Date(state.estimatedRestore).getTime() - Date.now())
           : null
       });
-    }
-
-    // ── Homelab metrics ──────────────────────────────────
-    // GET is public — the dashboard polls this. POST is how a script running
-    // on the home server (which has local access to whatever it's reading —
-    // Prometheus, raw OS stats, etc.) pushes a fresh snapshot in. Uses its
-    // own secret, separate from the admin password, since this token only
-    // needs to live in a cron job on the server, not grant admin control.
-    if (url.pathname === '/api/bf/metrics' && req.method === 'GET') {
-      const metrics = await getMetrics(kv);
-      return json({ metrics });
-    }
-
-    if (url.pathname === '/api/bf/metrics' && req.method === 'POST') {
-      if (!env.METRICS_SECRET || getSecret(req) !== env.METRICS_SECRET) {
-        return json({ error: 'invalid-secret' }, 401);
-      }
-      const rateErr = checkRateLimit('metrics-push');
-      if (rateErr) return rateErr;
-
-      const body = await req.json().catch(() => null);
-      if (!body || typeof body !== 'object') return json({ error: 'bad-request' }, 400);
-
-      await putMetrics(kv, { ...body, updatedAt: new Date().toISOString() });
-      return json({ success: true });
     }
 
     // ── Serve admin panel ───────────────────────────────

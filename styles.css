@@ -599,49 +599,6 @@ button { font-family: var(--font); cursor: pointer; border: none; background: no
   font-size: 0.85rem; color: var(--text-mid);
 }
 
-/* ─── LIVE METRICS ─── */
-.metrics-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 1.25rem;
-}
-.metric-card {
-  background: linear-gradient(180deg, rgba(12,16,26,0.6) 0%, rgba(7,10,16,0.8) 100%);
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  padding: 1.5rem;
-  transition: all 0.3s var(--ease);
-}
-.metric-card:hover { border-color: var(--line-mid); }
-.metric-top {
-  display: flex; align-items: baseline; justify-content: space-between;
-  margin-bottom: 1rem;
-}
-.metric-label {
-  font-size: 0.68rem; letter-spacing: 0.16em; text-transform: uppercase;
-  color: var(--text-dim); font-weight: 600;
-}
-.metric-value {
-  font-size: 1.5rem; font-weight: 700; color: var(--text); letter-spacing: -0.02em;
-}
-.metric-bar {
-  height: 6px; border-radius: 999px; background: var(--bg-3, rgba(148,176,210,0.1));
-  overflow: hidden;
-}
-.metric-bar-fill {
-  height: 100%; border-radius: 999px; width: 0%;
-  background: var(--cyan); transition: width 0.6s var(--ease), background 0.3s var(--ease);
-}
-.metric-card[data-level="warn"] .metric-bar-fill { background: var(--amber); }
-.metric-card[data-level="crit"] .metric-bar-fill { background: var(--danger); }
-.metric-sub {
-  font-size: 0.75rem; color: var(--text-dim); font-family: var(--mono);
-}
-.metric-empty {
-  text-align: center; color: var(--text-dim); font-size: 0.85rem;
-  font-family: var(--mono); padding: 2rem 0 0;
-}
-
 /* ─── ABOUT ─── */
 .s-about {
   padding: clamp(5rem,10vw,9rem) 0;
